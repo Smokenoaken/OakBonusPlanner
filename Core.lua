@@ -844,8 +844,9 @@ end
 local function MatchesSlot(itemID, target)
     local itemInfo = GetLootItemInfo(itemID)
     if not itemInfo or not target.slotIDs then return false end
+    local displaySlotID = GetDisplaySlotID(itemID, itemInfo.slotId)
     for _, slotID in ipairs(target.slotIDs) do
-        if itemInfo.slotId == slotID then return true end
+        if displaySlotID == slotID then return true end
     end
     return false
 end
@@ -887,7 +888,7 @@ local function GetFilledCatalystSlots(plan, classID, lootSpecID)
     for _, target in ipairs(config.allTargets or config.targets or {}) do
         local itemInfo = GetLootItemInfo(target.itemID)
         if itemInfo and HasSpec(itemInfo, classID, lootSpecID) and IsCatalystSlot(target) then
-            catalystItems[target.itemID] = itemInfo.slotId
+            catalystItems[target.itemID] = GetDisplaySlotID(target.itemID, itemInfo.slotId)
         end
     end
     for _, source in ipairs(addonTable.Data.Sources or {}) do
@@ -896,7 +897,7 @@ local function GetFilledCatalystSlots(plan, classID, lootSpecID)
                 local itemInfo = GetLootItemInfo(itemID)
                 if itemInfo and HasSpec(itemInfo, classID, lootSpecID) then
                     for _, slotID in ipairs(config.slotIDs or {}) do
-                        if itemInfo.slotId == slotID then
+                        if GetDisplaySlotID(itemID, itemInfo.slotId) == slotID then
                             catalystItems[itemID] = slotID
                             break
                         end
@@ -912,7 +913,7 @@ local function GetFilledCatalystSlots(plan, classID, lootSpecID)
                     and IsCatalystSlot(entry) then
                 local itemInfo = GetLootItemInfo(entry.itemID)
                 if itemInfo and HasSpec(itemInfo, classID, lootSpecID) then
-                    catalystItems[entry.itemID] = itemInfo.slotId
+                    catalystItems[entry.itemID] = GetDisplaySlotID(entry.itemID, itemInfo.slotId)
                 end
             end
         end
@@ -999,7 +1000,8 @@ local function BuildDesiredSet(pool, plan, targetSpecID, source, classID, lootSp
     local filledCatalystSlots = GetFilledCatalystSlots(plan, classID, lootSpecID)
     for itemID in pairs(catalyst) do
         local itemInfo = GetLootItemInfo(itemID)
-        if not filledCatalystSlots[itemInfo and itemInfo.slotId] then
+        local slotID = itemInfo and GetDisplaySlotID(itemID, itemInfo.slotId)
+        if not filledCatalystSlots[slotID] then
             desired[itemID] = true
         else
             -- Slot-mode catalyst plans fill the entire catalyst slot once any

@@ -148,15 +148,16 @@ function Get-CardCatalystTargets([object[]] $items, [hashtable] $sourcesByItemID
     $targets = @()
     foreach ($item in $items) {
         if (-not $item.isCatalyst -or -not $item.originalItemID) { continue }
-        $sourceMatch = [regex]::Match($item.source, '(?i)catalyst\s+(?:or|from)\s+(.+?)(?:\s+in\s+venomous abyss)?$')
-        $sources = @()
-        if ($sourceMatch.Success) {
-            $sources = @($sourceMatch.Groups[1].Value.Trim())
-        } else {
-            # Current Icy Veins cards often show only "Catalyst" followed by
-            # the base item and use original-item for that base item ID. The
-            # source is still recoverable from the static Season 2 pool.
-            $sources = @($sourcesByItemID[[int]$item.originalItemID])
+        # The transformed tier card's footer can name another eligible
+        # catalyst candidate. The only unambiguous identifier is
+        # original-item: resolve that base item through the bundled Season 2
+        # pool, then use the footer only if it is not present in the database.
+        $sources = @($sourcesByItemID[[int]$item.originalItemID])
+        if ($sources.Count -eq 0) {
+            $sourceMatch = [regex]::Match($item.source, '(?i)catalyst\s+(?:or|from)\s+(.+?)(?:\s+in\s+venomous abyss)?$')
+            if ($sourceMatch.Success) {
+                $sources = @($sourceMatch.Groups[1].Value.Trim())
+            }
         }
         foreach ($source in $sources) {
             if (-not $source) { continue }
@@ -208,6 +209,13 @@ function Get-GuideCatalystSlotID([string] $slot) {
 
 function Get-CatalogSourceKey([string] $source) {
     return (($source -replace '(?i)^the\s+', '').Trim().ToLowerInvariant())
+}
+
+function SourceNamesMatch([string] $left, [string] $right) {
+    $leftKey = Get-CatalogSourceKey $left
+    $rightKey = Get-CatalogSourceKey $right
+    if (-not $leftKey -or -not $rightKey) { return $false }
+    return $leftKey -eq $rightKey -or $leftKey.Contains($rightKey) -or $rightKey.Contains($leftKey)
 }
 
 function Get-SeasonLootCatalog {
@@ -279,7 +287,33 @@ function Get-SeasonLootCatalog {
     return [pscustomobject]@{
         byName = $catalog
         byItemID = $sources
+        itemSlots = $itemSlots
         bySourceSlot = $sourceSlotCatalog
+    }
+}
+
+function Assert-CatalystTargets([object[]] $targets, [object] $catalog, [string] $label) {
+    foreach ($target in $targets) {
+        if (-not $target.itemID -or -not $target.source) {
+            throw "Invalid catalyst target in $label"
+        }
+        $expectedSlotID = Get-GuideCatalystSlotID $target.slot
+        if ($null -eq $expectedSlotID) {
+            throw "Unsupported catalyst slot '$($target.slot)' in $label for item $($target.itemID)"
+        }
+        if (-not $catalog.itemSlots.ContainsKey([int]$target.itemID)) {
+            throw "Catalyst item $($target.itemID) is absent from the Season 2 item database in $label"
+        }
+        $sourceMatch = $false
+        foreach ($source in @($catalog.byItemID[[int]$target.itemID])) {
+            if (SourceNamesMatch $target.source $source) {
+                $sourceMatch = $true
+                break
+            }
+        }
+        if (-not $sourceMatch) {
+            throw "Catalyst item $($target.itemID) is not in '$($target.source)' according to the Season 2 loot database in $label"
+        }
     }
 }
 
@@ -437,6 +471,9 @@ foreach ($spec in $specs) {
                 | Sort-Object itemID, source -Unique
             )
         }
+        Assert-CatalystTargets $catalyst.overall $lootCatalog "$($spec.specName) $($spec.className) overall"
+        Assert-CatalystTargets $catalyst.raids $lootCatalog "$($spec.specName) $($spec.className) raids"
+        Assert-CatalystTargets $catalyst.dungeons $lootCatalog "$($spec.specName) $($spec.className) dungeons"
         $records += [pscustomobject]@{
             id = $spec.id
             name = "$($spec.specName) $($spec.className)"
