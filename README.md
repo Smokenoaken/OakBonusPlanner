@@ -16,17 +16,12 @@ Stop guessing where to spend your Nebulous Voidcores.
 - Displays your available Nebulous Voidcores.
 - Includes current Season 2 dungeon, raid, class/spec, and loot-eligibility data.
 - Lets you right-click items to create personal BIS overrides.
-- Fully standalone—**KeystoneLoot is not required.**
 
 This is not a live boss-drop-rate addon. It is a practical planner for the loot pool Blizzard uses when you spend a Voidcore.
 
 ## Use
 
 Open the planner with `/obp`, `/oakbonus`, or `/bonusplanner`. The Oak Plan minimap button opens the planner with a left click and its options with a right click. Use the footer `Rescan` control to recheck Blizzard's Voidcache tooltips for rolls made before OBP was installed.
-
-## Weekly data releases
-
-WoW addons cannot make arbitrary HTTPS requests to Wowhead or Icy Veins in-game. Weekly addon releases are therefore the right update boundary. From the repository root, run `powershell -ExecutionPolicy Bypass -File tools/Update-BISLists.ps1` to refresh `Data/BIS.lua`, the Season 2 BIS tables, review the data, bump the addon version, and ship the new addon package. For loot eligibility, `tools/Update-S2LootData.ps1` now imports KeystoneLoot's generated `data/items.lua`, `data/dungeons.lua`, and `data/raids.lua` when that addon is installed, preserving its per-spec eligibility database in Oak's own namespace. Run `tools/Import-KeystoneLootData.ps1` directly when only the local KeystoneLoot database needs refreshing. The Wowhead parser remains only as a fallback when the KeystoneLoot generated files are unavailable.
 
 The initial references were:
 
