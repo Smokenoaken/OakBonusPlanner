@@ -1,0 +1,116 @@
+name: Discord Release Announcement
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+jobs:
+  announce:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+      ADDON_NAME: Oak Bonus Planner
+      WEBHOOK_USERNAME: Oak Bonus Planner Releases
+      EMBED_COLOR: "5763719"
+      CURSEFORGE_URL: https://www.curseforge.com/wow/addons/oak-bonus-planner
+      WAGO_URL: https://addons.wago.io/addons/oakbonusplanner
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Collect release details
+        id: release
+        shell: bash
+        run: |
+          version="${GITHUB_REF_NAME}"
+          notes="$(awk -v header="## ${version}" '
+            $0 == header { in_section = 1; next }
+            in_section && /^## / { exit }
+            in_section && NF { print }
+          ' CHANGELOG.md)"
+
+          if [[ -z "$notes" ]]; then
+            notes="- See the CurseForge page for full release notes."
+          fi
+
+          if [[ ${#notes} -gt 3500 ]]; then
+            notes="${notes:0:3497}..."
+          fi
+
+          {
+            echo "version=$version"
+            echo "notes<<EOF"
+            printf '%s\n' "$notes"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Post Discord announcement
+        if: ${{ env.DISCORD_WEBHOOK_URL != '' }}
+        env:
+          VERSION: ${{ steps.release.outputs.version }}
+          NOTES: ${{ steps.release.outputs.notes }}
+          GITHUB_RELEASE_URL: ${{ github.server_url }}/${{ github.repository }}/releases/tag/${{ github.ref_name }}
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+
+          payload = {
+              "username": os.environ["WEBHOOK_USERNAME"],
+              "embeds": [
+                  {
+                      "title": f"New Update: {os.environ['ADDON_NAME']} {os.environ['VERSION']}",
+                      "url": os.environ["CURSEFORGE_URL"],
+                      "description": (
+                          "Your bonus-roll plan has been updated.\n\n"
+                          f"{os.environ['NOTES']}"
+                      ),
+                      "color": int(os.environ["EMBED_COLOR"]),
+                      "fields": [
+                          {
+                              "name": "Downloads",
+                              "value": (
+                                  f"[CurseForge]({os.environ['CURSEFORGE_URL']})\n"
+                                  f"[Wago]({os.environ['WAGO_URL']})"
+                              ),
+                              "inline": True,
+                          },
+                          {
+                              "name": "Build",
+                              "value": os.environ["VERSION"],
+                              "inline": True,
+                          },
+                          {
+                              "name": "Patch Link",
+                              "value": f"[GitHub tag]({os.environ['GITHUB_RELEASE_URL']})",
+                              "inline": True,
+                          },
+                          {
+                              "name": "Status",
+                              "value": "Ready to install on CurseForge or Wago.",
+                              "inline": False,
+                          },
+                      ],
+                  }
+              ],
+          }
+
+          with open("discord-payload.json", "w", encoding="utf-8") as handle:
+              json.dump(payload, handle, ensure_ascii=True)
+          PY
+
+          curl --fail-with-body --silent --show-error \
+            -H "Content-Type: application/json" \
+            --data @discord-payload.json \
+            "$DISCORD_WEBHOOK_URL"
+
+      - name: Missing Discord webhook secret
+        if: ${{ env.DISCORD_WEBHOOK_URL == '' }}
+        run: |
+          echo "::warning::Set the DISCORD_WEBHOOK_URL repository secret to enable Discord release announcements."
