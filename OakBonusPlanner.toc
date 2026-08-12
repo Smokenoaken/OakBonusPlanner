@@ -1,12 +1,19 @@
-## Interface: 120007
+## Interface: 120007, 120100
 ## Title: Oak Bonus Planner
 ## Notes: Plan bonus rolls around your remaining Best in Slot targets.
 ## Author: Smokenoaken
-## Version: 0.1.0
+## IconTexture: Interface\AddOns\OakBonusPlanner\Media\icon.png
+## Version: 0.5.0-beta.1
 ## SavedVariables: OakBonusPlannerDB
 ## SavedVariablesPerCharacter: OakBonusPlannerCharDB
 
 Init.lua
+Data/BIS.lua
 Data.lua
+Data/LootDungeons.lua
+Data/LootRaids.lua
+Data/LootItems.lua
 Core.lua
 UI.lua
+Options.lua
+MinimapButton.lua

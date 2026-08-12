@@ -8,12 +8,21 @@ local CHAR_DB = OakBonusPlannerCharDB
 
 DB.version = DB.version or 1
 DB.source = DB.source or "icy-veins"
+DB.sortMode = DB.sortMode or "chance"
 DB.obtainedItems = DB.obtainedItems or {}
 DB.obtainedNames = DB.obtainedNames or {}
+DB.bisOverrides = DB.bisOverrides or {}
 DB.position = DB.position or { point = "CENTER", x = 0, y = 0 }
 DB.scale = tonumber(DB.scale) or 1
+DB.hideMinimapButton = DB.hideMinimapButton == true
+DB.minimapButton = type(DB.minimapButton) == "table" and DB.minimapButton or {}
+DB.size = type(DB.size) == "table" and DB.size or { width = 610, height = 620 }
 CHAR_DB.selectedClassID = tonumber(CHAR_DB.selectedClassID)
 CHAR_DB.selectedSpecID = tonumber(CHAR_DB.selectedSpecID)
+-- Follow the character's live specialization until the user deliberately
+-- chooses another class/spec from the planner menu.
+CHAR_DB.followCurrentSpec = CHAR_DB.followCurrentSpec ~= false
+CHAR_DB.bonusRolls = type(CHAR_DB.bonusRolls) == "table" and CHAR_DB.bonusRolls or {}
 
 addonTable.Name = addonName
 addonTable.DB = DB
@@ -29,9 +38,9 @@ addonTable.Theme = {
     accent = { 0.95, 0.45, 0.10, 1 },
 }
 
-local function CreateFont(name, size, flags)
+local function CreateOakFont(name, size, flags)
     local font = CreateFont(name)
-    local path = "Interface\\AddOns\\Oak Bonus Planner\\Media\\OakFont.ttf"
+    local path = "Interface\\AddOns\\OakBonusPlanner\\Media\\OakFont.ttf"
     font:SetFont(path, size, flags or "")
     font:SetShadowColor(0, 0, 0, 1)
     font:SetShadowOffset(1, -1)
@@ -39,9 +48,9 @@ local function CreateFont(name, size, flags)
 end
 
 addonTable.Fonts = {
-    regular = CreateFont("OakBonusPlannerFontRegular", 12),
-    small = CreateFont("OakBonusPlannerFontSmall", 10),
-    large = CreateFont("OakBonusPlannerFontLarge", 15),
+    regular = CreateOakFont("OakBonusPlannerFontRegular", 12),
+    small = CreateOakFont("OakBonusPlannerFontSmall", 10),
+    large = CreateOakFont("OakBonusPlannerFontLarge", 15),
 }
 
 function addonTable.ApplyFont(fontString, kind)
@@ -113,6 +122,11 @@ end
 function addonTable.ResetObtained()
     wipe(DB.obtainedItems)
     wipe(DB.obtainedNames)
+    wipe(CHAR_DB.bonusRolls)
+    -- Reset is an intentional local clear. Do not immediately repopulate it
+    -- from cache tooltips when the planner is next opened; /obp rescan does
+    -- that explicitly.
+    CHAR_DB.bonusRollScanVersion = addonTable.Data.dataVersion
 end
 
 SLASH_OAKBONUSPLANNER1 = "/obp"
@@ -124,6 +138,14 @@ SlashCmdList.OAKBONUSPLANNER = function(message)
         addonTable.ResetObtained()
         print("|cffff8200Oak Bonus Planner|r: tracked bonus-roll history reset.")
         if addonTable.Refresh then addonTable.Refresh() end
+        return
+    end
+    if message == "options" then
+        if addonTable.ShowOptions then addonTable.ShowOptions() end
+        return
+    end
+    if message == "rescan" then
+        if addonTable.ScanBonusRollHistory then addonTable.ScanBonusRollHistory(true) end
         return
     end
     if addonTable.Toggle then addonTable.Toggle() end
