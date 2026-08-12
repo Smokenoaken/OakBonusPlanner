@@ -13,7 +13,7 @@ DB.obtainedItems = DB.obtainedItems or {}
 DB.obtainedNames = DB.obtainedNames or {}
 DB.bisOverrides = DB.bisOverrides or {}
 DB.position = DB.position or { point = "CENTER", x = 0, y = 0 }
-DB.scale = tonumber(DB.scale) or 1
+DB.scale = math.max(0.75, math.min(1.50, tonumber(DB.scale) or 1))
 DB.hideMinimapButton = DB.hideMinimapButton == true
 DB.minimapButton = type(DB.minimapButton) == "table" and DB.minimapButton or {}
 DB.size = type(DB.size) == "table" and DB.size or { width = 610, height = 620 }
@@ -52,6 +52,14 @@ addonTable.Fonts = {
     small = CreateOakFont("OakBonusPlannerFontSmall", 10),
     large = CreateOakFont("OakBonusPlannerFontLarge", 15),
 }
+
+function addonTable.SetPlannerScale(value)
+    value = tonumber(value) or 1
+    value = math.floor((math.max(0.75, math.min(1.50, value)) * 20) + 0.5) / 20
+    DB.scale = value
+    if addonTable.Frame then addonTable.Frame:SetScale(value) end
+    return value
+end
 
 function addonTable.ApplyFont(fontString, kind)
     if fontString and addonTable.Fonts[kind or "regular"] then

@@ -2,7 +2,7 @@ local _, addonTable = ...
 
 local panel = CreateFrame("Frame", "OakBonusPlannerOptionsFrame", UIParent, "BackdropTemplate")
 addonTable.OptionsPanel = panel
-panel:SetSize(330, 180)
+panel:SetSize(330, 252)
 panel:SetFrameStrata("DIALOG")
 panel:SetToplevel(true)
 panel:SetFrameLevel((addonTable.Frame and addonTable.Frame:GetFrameLevel() or 0) + 20)
@@ -61,6 +61,60 @@ minimapCheck:SetScript("OnClick", function(self)
     end
 end)
 
+local scaleLabel = panel:CreateFontString(nil, "OVERLAY")
+scaleLabel:SetPoint("TOPLEFT", 18, -132)
+addonTable.ApplyFont(scaleLabel, "regular")
+scaleLabel:SetText("Planner scale")
+scaleLabel:SetTextColor(unpack(addonTable.Theme.text))
+
+local scaleValue = CreateFrame("EditBox", nil, panel, "InputBoxTemplate")
+scaleValue:SetSize(46, 20)
+scaleValue:SetPoint("TOPRIGHT", -22, -128)
+scaleValue:SetAutoFocus(false)
+scaleValue:SetNumeric(false)
+scaleValue:SetMaxLetters(4)
+scaleValue:SetJustifyH("CENTER")
+addonTable.ApplyFont(scaleValue, "small")
+
+local scaleSlider = CreateFrame("Slider", nil, panel, "OptionsSliderTemplate")
+scaleSlider:SetPoint("TOPLEFT", 20, -157)
+scaleSlider:SetPoint("TOPRIGHT", -76, -157)
+scaleSlider:SetHeight(18)
+scaleSlider:SetMinMaxValues(0.75, 1.50)
+scaleSlider:SetValueStep(0.05)
+scaleSlider:SetObeyStepOnDrag(true)
+scaleSlider.Low:SetText("75%")
+scaleSlider.High:SetText("150%")
+scaleSlider.Text:SetText("")
+
+local function ApplyScale(value)
+    local scale = addonTable.SetPlannerScale(value)
+    scaleSlider:SetValue(scale)
+    scaleValue:SetText(string.format("%d%%", scale * 100 + 0.5))
+end
+
+scaleSlider:SetScript("OnValueChanged", function(_, value)
+    local scale = addonTable.SetPlannerScale(value)
+    scaleValue:SetText(string.format("%d%%", scale * 100 + 0.5))
+end)
+scaleSlider:SetScript("OnEnter", function(self)
+    GameTooltip:SetOwner(self, "ANCHOR_TOP")
+    GameTooltip:SetText("Planner scale", 1, 0.82, 0)
+    GameTooltip:AddLine("Adjust Oak Bonus Planner's display size. This does not change the saved window dimensions.", 1, 1, 1, true)
+    GameTooltip:Show()
+end)
+scaleSlider:SetScript("OnLeave", function() GameTooltip:Hide() end)
+scaleValue:SetScript("OnEnterPressed", function(self)
+    local text = string.gsub(self:GetText() or "", "%%", "")
+    local value = tonumber(text)
+    if value then ApplyScale(value / 100) else ApplyScale(addonTable.DB.scale) end
+    self:ClearFocus()
+end)
+scaleValue:SetScript("OnEscapePressed", function(self)
+    ApplyScale(addonTable.DB.scale)
+    self:ClearFocus()
+end)
+
 local slashHint = panel:CreateFontString(nil, "OVERLAY")
 slashHint:SetPoint("BOTTOMLEFT", 18, 18)
 slashHint:SetPoint("BOTTOMRIGHT", -18, 18)
@@ -71,6 +125,7 @@ slashHint:SetText("Commands: /obp to open the planner  •  /obp options")
 
 local function RefreshOptions()
     minimapCheck:SetChecked(addonTable.DB.hideMinimapButton ~= true)
+    ApplyScale(addonTable.DB.scale)
 end
 
 function addonTable.ToggleOptions()

@@ -1030,6 +1030,16 @@ local function GetSourceArtwork(source)
     return nil
 end
 
+local function GetSourceIcon(source, artwork)
+    if artwork then return artwork end
+    if source and source.bossID then
+        -- The generated raid database does not include background artwork.
+        -- Use Blizzard's native raid icon instead of presenting a question mark.
+        return "Interface\\LFGFrame\\LFGIcon-Raid"
+    end
+    return "Interface\\Icons\\INV_Misc_QuestionMark"
+end
+
 local function CountSet(set)
     local count = 0
     for _ in pairs(set or {}) do count = count + 1 end
@@ -1112,6 +1122,7 @@ local function AddSourceItems(stats, targetSpecID)
     end)
     stats.items = items
     stats.artwork = GetSourceArtwork(stats.source)
+    stats.icon = GetSourceIcon(stats.source, stats.artwork)
     return stats
 end
 
