@@ -111,6 +111,16 @@ function Get-LootRows([string] $html) {
 
 function Get-SlotId([string] $type, $metadata = $null) {
     $value = $type.ToLowerInvariant()
+    # When Wowhead metadata is available it is the item's actual inventory
+    # type. Prefer it over scraped table prose, which can misclassify an item
+    # such as a trinket as an off hand in the generated display data.
+    $slotbak = $metadata.jsonequip.slotbak
+    switch ([int]$slotbak) {
+        1 { return 0 }; 3 { return 2 }; 5 { return 4 }; 6 { return 5 }
+        7 { return 8 }; 8 { return 9 }; 9 { return 6 }; 10 { return 7 }
+        11 { return 11 }; 12 { return 12 }; 13 { return 10 }; 16 { return 3 }
+        17 { return 10 }; 21 { return 10 }; 22 { return 10 }; 23 { return 13 }
+    }
     if ($value -match 'helm|head') { return 0 }
     if ($value -match 'neck') { return 1 }
     if ($value -match 'shoulder') { return 2 }
@@ -125,13 +135,6 @@ function Get-SlotId([string] $type, $metadata = $null) {
     if ($value -match 'trinket') { return 12 }
     if ($value -match 'off-hand|off hand|shield') { return 13 }
     if ($value -match 'weapon|one-hand|two-hand|1h|2h|dagger|mace|axe|sword|fist') { return 10 }
-    $slotbak = $metadata.jsonequip.slotbak
-    switch ([int]$slotbak) {
-        1 { return 0 }; 3 { return 2 }; 5 { return 4 }; 6 { return 5 }
-        7 { return 8 }; 8 { return 9 }; 9 { return 6 }; 10 { return 7 }
-        11 { return 11 }; 12 { return 12 }; 13 { return 10 }; 16 { return 3 }
-        17 { return 10 }; 21 { return 10 }; 22 { return 10 }; 23 { return 13 }
-    }
     return 14
 }
 

@@ -797,8 +797,7 @@ local function CreateSourceRow(index)
             GameTooltip:AddLine("Items shown are the drops available when this alternate loot specialization is active.", 0.75, 0.75, 0.75, true)
         end
         GameTooltip:AddLine(string.format("BIS chance: %d%%", math.floor(data.chance * 100 + 0.5)), 1, 1, 1)
-        GameTooltip:AddLine(string.format("Remaining BIS: %d / %d", data.desiredRemaining, data.desiredTotal), 1, 0.82, 0)
-        GameTooltip:AddLine(string.format("Remaining eligible pool: %d / %d", data.poolRemaining, data.poolTotal), 1, 1, 1)
+        GameTooltip:AddLine(string.format("Wanted from remaining pool: %d / %d", data.desiredRemaining, data.poolRemaining), 1, 0.82, 0)
         if data.tierTokenTotal and data.tierTokenTotal > 0 then
             GameTooltip:AddLine(string.format("Includes %d eligible raid tier token%s.", data.tierTokenTotal, data.tierTokenTotal == 1 and "" or "s"), 1, 0.82, 0)
         end
@@ -829,13 +828,11 @@ local function UpdateRow(row, data, top, index)
     local classData = addonTable.Data.Specs[data.classID]
     local recommendedName = classData and classData.specs[data.recommendedLootSpecID] or "Selected"
     row.stats:SetText(string.format(
-        "Loot: %s  •  %d%% BIS  •  %d/%d wanted  •  %d/%d drops",
+        "Loot: %s  •  %d%% BIS  •  %d/%d wanted",
         recommendedName,
         math.floor(data.chance * 100 + 0.5),
         data.desiredRemaining,
-        data.desiredTotal,
-        data.poolRemaining,
-        data.poolTotal
+        data.poolRemaining
     ))
     row.stats:SetTextColor(unpack(CLASSIC_GOLD))
     row.rowData = data

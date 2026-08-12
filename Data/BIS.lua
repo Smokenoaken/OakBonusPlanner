@@ -3,7 +3,7 @@
 OakBonusPlannerBIS = OakBonusPlannerBIS or {}
 OakBonusPlannerBIS.patch = "12.1"
 OakBonusPlannerBIS.season = "Midnight Season 2"
-OakBonusPlannerBIS.generatedAt = "2026-08-11"
+OakBonusPlannerBIS.generatedAt = "2026-08-12"
 OakBonusPlannerBIS.Specs = {
     [62] = {
         name = "Arcane Mage",
@@ -71,10 +71,18 @@ OakBonusPlannerBIS.Specs = {
         },
         catalyst = {
             overall = {
+                { itemID = 268236, slot = "Legs", name = "Primal Leywarden's Tailored Legwraps", source = "Nek'zali the Soulcoiler" },
+                { itemID = 268241, slot = "Shoulders", name = "Primal Leywarden's Manaflux", source = "The Twin Fangs" },
+                { itemID = 268243, slot = "Hands", name = "Primal Leywarden's Manashapers", source = "The Coiled Altar" },
+                { itemID = 273785, slot = "Chest", name = "Crest of the Primal Leywarden", source = "Altar of Fangs" },
             },
             raids = {
+                { itemID = 268236, slot = "Legs", name = "Primal Leywarden's Tailored Legwraps", source = "Nek'zali the Soulcoiler" },
+                { itemID = 268241, slot = "Shoulders", name = "Primal Leywarden's Manaflux", source = "The Twin Fangs" },
+                { itemID = 268243, slot = "Hands", name = "Primal Leywarden's Manashapers", source = "The Coiled Altar" },
             },
             dungeons = {
+                { itemID = 273785, slot = "Chest", name = "Crest of the Primal Leywarden", source = "Altar of Fangs" },
             },
         },
         wowheadOverall = {
@@ -84,7 +92,6 @@ OakBonusPlannerBIS.Specs = {
             240167,
             245769,
             245770,
-            245872,
             250215,
             251148,
             264507,
@@ -100,8 +107,8 @@ OakBonusPlannerBIS.Specs = {
             271564,
             271565,
             271567,
+            273059,
             274476,
-            1291683,
         },
     },
     [63] = {
@@ -170,10 +177,18 @@ OakBonusPlannerBIS.Specs = {
         },
         catalyst = {
             overall = {
+                { itemID = 268236, slot = "Legs", name = "Primal Leywarden's Tailored Legwraps", source = "Nek'zali the Soulcoiler" },
+                { itemID = 268241, slot = "Shoulders", name = "Primal Leywarden's Manaflux", source = "The Twin Fangs" },
+                { itemID = 268243, slot = "Hands", name = "Primal Leywarden's Manashapers", source = "The Coiled Altar" },
+                { itemID = 273785, slot = "Chest", name = "Crest of the Primal Leywarden", source = "Altar of Fangs" },
             },
             raids = {
+                { itemID = 268236, slot = "Legs", name = "Primal Leywarden's Tailored Legwraps", source = "Nek'zali the Soulcoiler" },
+                { itemID = 268241, slot = "Shoulders", name = "Primal Leywarden's Manaflux", source = "The Twin Fangs" },
+                { itemID = 268243, slot = "Hands", name = "Primal Leywarden's Manashapers", source = "The Coiled Altar" },
             },
             dungeons = {
+                { itemID = 273785, slot = "Chest", name = "Crest of the Primal Leywarden", source = "Altar of Fangs" },
             },
         },
         wowheadOverall = {
@@ -379,10 +394,16 @@ OakBonusPlannerBIS.Specs = {
         },
         catalyst = {
             overall = {
+                { itemID = 159413, slot = "Hands", name = "Gauntlets of the Consecrated Flame", source = "King's Rest" },
+                { itemID = 268222, slot = "Chest", name = "Bulwark of the Consecrated Flame", source = "The Coiled Altar" },
+                { itemID = 271878, slot = "Legs", name = "Greaves of the Consecrated Flame", source = "Ula'tek" },
             },
             raids = {
+                { itemID = 268222, slot = "Chest", name = "Bulwark of the Consecrated Flame", source = "The Coiled Altar" },
+                { itemID = 271878, slot = "Legs", name = "Greaves of the Consecrated Flame", source = "Ula'tek" },
             },
             dungeons = {
+                { itemID = 159413, slot = "Hands", name = "Gauntlets of the Consecrated Flame", source = "King's Rest" },
             },
         },
         wowheadOverall = {
@@ -484,10 +505,20 @@ OakBonusPlannerBIS.Specs = {
         },
         catalyst = {
             overall = {
+                { itemID = 251138, slot = "Shoulders", name = "Pauldrons of the Consecrated Flame", source = "Murder Row" },
+                { itemID = 268220, slot = "Hands", name = "Gauntlets of the Consecrated Flame", source = "The Twin Fangs" },
+                { itemID = 268222, slot = "Chest", name = "Bulwark of the Consecrated Flame", source = "The Coiled Altar" },
+                { itemID = 268229, slot = "Helm", name = "Warhelm of the Consecrated Flame", source = "Nek'zali the Soulcoiler" },
+                { itemID = 271878, slot = "Legs", name = "Greaves of the Consecrated Flame", source = "Ula'tek" },
             },
             raids = {
+                { itemID = 268220, slot = "Hands", name = "Gauntlets of the Consecrated Flame", source = "The Twin Fangs" },
+                { itemID = 268222, slot = "Chest", name = "Bulwark of the Consecrated Flame", source = "The Coiled Altar" },
+                { itemID = 268229, slot = "Helm", name = "Warhelm of the Consecrated Flame", source = "Nek'zali the Soulcoiler" },
+                { itemID = 271878, slot = "Legs", name = "Greaves of the Consecrated Flame", source = "Ula'tek" },
             },
             dungeons = {
+                { itemID = 251138, slot = "Shoulders", name = "Pauldrons of the Consecrated Flame", source = "Murder Row" },
             },
         },
         wowheadOverall = {
@@ -689,11 +720,18 @@ OakBonusPlannerBIS.Specs = {
         },
         catalyst = {
             overall = {
+                { itemID = 239037, slot = "Shoulder", name = "C'thraxxi Binders Pauldrons", source = "Temple of Sethraliss" },
+                { itemID = 251151, slot = "Chest", name = "Sentinel Challenger's Prize", source = "Den of Nalorakk" },
+                { itemID = 251214, slot = "Hands", name = "Bonds of the Hash'ura", source = "Den of Nalorakk" },
+                { itemID = 251229, slot = "Helm", name = "Visor of the Predator", source = "Voidscar Arena" },
                 { itemID = 268222, slot = "Chest", name = "Reckless Spirit Breastplate", source = "Coiled Altar" },
+                { itemID = 268222, slot = "Chest", name = "Cuirass of the Jade Warlord", source = "The Coiled Altar" },
                 { itemID = 271878, slot = "Legs", name = "Chausses of Unbound Rancor", source = "Ula'tek" },
+                { itemID = 273776, slot = "Legs", name = "Ancient General's Obsidian Pillars", source = "Altar of Fangs" },
             },
             raids = {
                 { itemID = 268222, slot = "Chest", name = "Reckless Spirit Breastplate", source = "Coiled Altar" },
+                { itemID = 268222, slot = "Chest", name = "Cuirass of the Jade Warlord", source = "The Coiled Altar" },
                 { itemID = 271878, slot = "Legs", name = "Chausses of Unbound Rancor", source = "Ula'tek" },
             },
             dungeons = {
@@ -795,12 +833,19 @@ OakBonusPlannerBIS.Specs = {
         },
         catalyst = {
             overall = {
+                { itemID = 193753, slot = "Chest", name = "Breastplate of Soaring Terror", source = "Ruby Life Pools" },
+                { itemID = 251126, slot = "Helm", name = "Greathelm of Temptation", source = "Murder Row" },
+                { itemID = 251138, slot = "Shoulders", name = "Cinderfury Shoulderguards", source = "Murder Row" },
+                { itemID = 251214, slot = "Hands", name = "Bonds of the Hash'ura", source = "Den of Nalorakk" },
                 { itemID = 268222, slot = "Chest", name = "Reckless Spirit Breastplate", source = "Coiled Altar" },
+                { itemID = 268222, slot = "Chest", name = "Cuirass of the Jade Warlord", source = "The Coiled Altar" },
                 { itemID = 268229, slot = "Helm", name = "Skullguard of the Risen Sacrifice", source = "Nek'zali" },
                 { itemID = 271878, slot = "Legs", name = "Chausses of Unbound Rancor", source = "Ula'tek" },
+                { itemID = 273776, slot = "Legs", name = "Ancient General's Obsidian Pillars", source = "Altar of Fangs" },
             },
             raids = {
                 { itemID = 268222, slot = "Chest", name = "Reckless Spirit Breastplate", source = "Coiled Altar" },
+                { itemID = 268222, slot = "Chest", name = "Cuirass of the Jade Warlord", source = "The Coiled Altar" },
                 { itemID = 268229, slot = "Helm", name = "Skullguard of the Risen Sacrifice", source = "Nek'zali" },
                 { itemID = 271878, slot = "Legs", name = "Chausses of Unbound Rancor", source = "Ula'tek" },
             },
@@ -1002,8 +1047,12 @@ OakBonusPlannerBIS.Specs = {
         },
         catalyst = {
             overall = {
+                { itemID = 268225, slot = "Legs", name = "Enigmatic Dreamwatcher's Leggings", source = "The Coiled Altar" },
+                { itemID = 271875, slot = "Helm", name = "Enigmatic Dreamwatcher's Somnolent Stare", source = "Ula'tek" },
             },
             raids = {
+                { itemID = 268225, slot = "Legs", name = "Enigmatic Dreamwatcher's Leggings", source = "The Coiled Altar" },
+                { itemID = 271875, slot = "Helm", name = "Enigmatic Dreamwatcher's Somnolent Stare", source = "Ula'tek" },
             },
             dungeons = {
             },
@@ -1107,16 +1156,11 @@ OakBonusPlannerBIS.Specs = {
             },
             raids = {
                 { itemID = 268225, slot = "Legs", name = "Enigmatic Dreamwatcher's Leggings", source = "Coiled Altar" },
-                { itemID = 268234, slot = "Hands", name = "Enigmatic Dreamwatcher's Gauntlets", source = "Sszorak" },
                 { itemID = 268235, slot = "Chest", name = "Enigmatic Dreamwatcher's Lunar Raiment", source = "Nek'zali" },
                 { itemID = 271875, slot = "Helm", name = "Enigmatic Dreamwatcher's Somnolent Stare", source = "Ula'tek" },
             },
             dungeons = {
                 { itemID = 251124, slot = "Hands", name = "Enigmatic Dreamwatcher's Gauntlets", source = "Murder Row" },
-                { itemID = 251130, slot = "Legs", name = "Enigmatic Dreamwatcher's Leggings", source = "Murder Row" },
-                { itemID = 251140, slot = "Helm", name = "Enigmatic Dreamwatcher's Somnolent Stare", source = "Murder Row" },
-                { itemID = 251159, slot = "Chest", name = "Enigmatic Dreamwatcher's Lunar Raiment", source = "Den of Nalorakk" },
-                { itemID = 251223, slot = "Shoulders", name = "Enigmatic Dreamwatcher's Plumage", source = "Voidscar Arena" },
             },
         },
         wowheadOverall = {
@@ -1209,17 +1253,27 @@ OakBonusPlannerBIS.Specs = {
         },
         catalyst = {
             overall = {
-                { itemID = 268225, slot = "Legs", name = "Coiled Hex Legguards", source = "Coiled Altar" },
+                { itemID = 251223, slot = "Shoulders", name = "Somber Spaulders", source = "Voidscar Arena" },
+                { itemID = 251226, slot = "Chest", name = "Hide of Pestilence", source = "Voidscar Arena" },
+                { itemID = 251227, slot = "Shoulders", name = "Somber Spaulders", source = "Voidscar Arena" },
+                { itemID = 251233, slot = "Chest", name = "Hide of Pestilence", source = "Voidscar Arena" },
+                { itemID = 268225, slot = "Legs", name = "Coiled Hex Legguards", source = "The Coiled Altar" },
+                { itemID = 268237, slot = "Legs", name = "Coiled Hex Legguards", source = "The Coiled Altar" },
+                { itemID = 271874, slot = "Helm", name = "Gaze of the Coiled Watcher", source = "Ula'tek" },
                 { itemID = 271875, slot = "Helm", name = "Gaze of the Coiled Watcher", source = "Ula'tek" },
+                { itemID = 273791, slot = "Helm", name = "Spare Speaker's Hood", source = "Altar of Fangs" },
             },
             raids = {
-                { itemID = 268225, slot = "Legs", name = "Coiled Hex Legguards", source = "Coiled Altar" },
+                { itemID = 268225, slot = "Legs", name = "Coiled Hex Legguards", source = "The Coiled Altar" },
+                { itemID = 268237, slot = "Legs", name = "Coiled Hex Legguards", source = "The Coiled Altar" },
+                { itemID = 271874, slot = "Helm", name = "Gaze of the Coiled Watcher", source = "Ula'tek" },
                 { itemID = 271875, slot = "Helm", name = "Gaze of the Coiled Watcher", source = "Ula'tek" },
             },
             dungeons = {
-                { itemID = 251124, slot = "Gloves", name = "Gauntlets of Fevered Defense", source = "Murder Row" },
                 { itemID = 251223, slot = "Shoulders", name = "Somber Spaulders", source = "Voidscar Arena" },
                 { itemID = 251226, slot = "Chest", name = "Hide of Pestilence", source = "Voidscar Arena" },
+                { itemID = 251227, slot = "Shoulders", name = "Somber Spaulders", source = "Voidscar Arena" },
+                { itemID = 251233, slot = "Chest", name = "Hide of Pestilence", source = "Voidscar Arena" },
                 { itemID = 273791, slot = "Helm", name = "Spare Speaker's Hood", source = "Altar of Fangs" },
             },
         },
@@ -1325,8 +1379,12 @@ OakBonusPlannerBIS.Specs = {
         },
         catalyst = {
             overall = {
+                { itemID = 268225, slot = "Legs", name = "Enigmatic Dreamwatcher's Leggings", source = "The Coiled Altar" },
+                { itemID = 268235, slot = "Chest", name = "Enigmatic Dreamwatcher's Lunar Raiment", source = "Nek'zali the Soulcoiler" },
             },
             raids = {
+                { itemID = 268225, slot = "Legs", name = "Enigmatic Dreamwatcher's Leggings", source = "The Coiled Altar" },
+                { itemID = 268235, slot = "Chest", name = "Enigmatic Dreamwatcher's Lunar Raiment", source = "Nek'zali the Soulcoiler" },
             },
             dungeons = {
             },
@@ -1510,15 +1568,10 @@ OakBonusPlannerBIS.Specs = {
             },
             raids = {
                 { itemID = 268222, slot = "Chest", name = "Baleful Grave-Knight's Breastplate", source = "Coiled Altar" },
-                { itemID = 268226, slot = "Shoulders", name = "Baleful Grave-Knight's Gibbets", source = "Nymrissa Wavecaller" },
                 { itemID = 271878, slot = "Legs", name = "Baleful Grave-Knight's Greaves", source = "Ula'tek" },
             },
             dungeons = {
-                { itemID = 159413, slot = "Hands", name = "Baleful Grave-Knight's Deathgrips", source = "King's Rest" },
-                { itemID = 239036, slot = "Chest", name = "Baleful Grave-Knight's Breastplate", source = "Temple of Sethraliss" },
                 { itemID = 239037, slot = "Shoulders", name = "Baleful Grave-Knight's Gibbets", source = "Temple of Sethraliss" },
-                { itemID = 251229, slot = "Helm", name = "Baleful Grave-Knight's Casque", source = "Voidscar Arena" },
-                { itemID = 273776, slot = "Legs", name = "Baleful Grave-Knight's Greaves", source = "Altar of Fangs" },
             },
         },
         wowheadOverall = {
@@ -1619,15 +1672,10 @@ OakBonusPlannerBIS.Specs = {
             },
             raids = {
                 { itemID = 268222, slot = "Chest", name = "Baleful Grave-Knight's Breastplate", source = "Coiled Altar" },
-                { itemID = 268226, slot = "Shoulders", name = "Baleful Grave-Knight's Gibbets", source = "Nymrissa Wavecaller" },
                 { itemID = 271878, slot = "Legs", name = "Baleful Grave-Knight's Greaves", source = "Ula'tek" },
             },
             dungeons = {
-                { itemID = 159413, slot = "Hands", name = "Baleful Grave-Knight's Deathgrips", source = "King's Rest" },
-                { itemID = 239036, slot = "Chest", name = "Baleful Grave-Knight's Breastplate", source = "Temple of Sethraliss" },
                 { itemID = 251138, slot = "Shoulders", name = "Baleful Grave-Knight's Gibbets", source = "Murder Row" },
-                { itemID = 251229, slot = "Helm", name = "Baleful Grave-Knight's Casque", source = "Voidscar Arena" },
-                { itemID = 273776, slot = "Legs", name = "Baleful Grave-Knight's Greaves", source = "Altar of Fangs" },
             },
         },
         wowheadOverall = {
@@ -1720,10 +1768,20 @@ OakBonusPlannerBIS.Specs = {
         },
         catalyst = {
             overall = {
+                { itemID = 160213, slot = "Hands", name = "Skulking Viper's Hidepiercers", source = "King's Rest" },
+                { itemID = 251220, slot = "Helm", name = "Skulking Viper's Weeping Fangs", source = "Voidscar Arena" },
+                { itemID = 268231, slot = "Shoulders", name = "Jaws of the Skulking Viper", source = "The Coiled Altar" },
+                { itemID = 268237, slot = "Legs", name = "Skulking Viper's Coiled Legwraps", source = "The Coiled Altar" },
+                { itemID = 271876, slot = "Chest", name = "Skulking Viper's Scuteplate", source = "Ula'tek" },
             },
             raids = {
+                { itemID = 268231, slot = "Shoulders", name = "Jaws of the Skulking Viper", source = "The Coiled Altar" },
+                { itemID = 268237, slot = "Legs", name = "Skulking Viper's Coiled Legwraps", source = "The Coiled Altar" },
+                { itemID = 271876, slot = "Chest", name = "Skulking Viper's Scuteplate", source = "Ula'tek" },
             },
             dungeons = {
+                { itemID = 160213, slot = "Hands", name = "Skulking Viper's Hidepiercers", source = "King's Rest" },
+                { itemID = 251220, slot = "Helm", name = "Skulking Viper's Weeping Fangs", source = "Voidscar Arena" },
             },
         },
         wowheadOverall = {
@@ -1823,10 +1881,20 @@ OakBonusPlannerBIS.Specs = {
         },
         catalyst = {
             overall = {
+                { itemID = 193752, slot = "Hands", name = "Skulking Viper's Hidepiercers", source = "Ruby Life Pools" },
+                { itemID = 268230, slot = "Helm", name = "Skulking Viper's Weeping Fangs", source = "Nek'zali the Soulcoiler" },
+                { itemID = 268231, slot = "Shoulders", name = "Jaws of the Skulking Viper", source = "The Coiled Altar" },
+                { itemID = 268237, slot = "Legs", name = "Skulking Viper's Coiled Legwraps", source = "The Coiled Altar" },
+                { itemID = 271876, slot = "Chest", name = "Skulking Viper's Scuteplate", source = "Ula'tek" },
             },
             raids = {
+                { itemID = 268230, slot = "Helm", name = "Skulking Viper's Weeping Fangs", source = "Nek'zali the Soulcoiler" },
+                { itemID = 268231, slot = "Shoulders", name = "Jaws of the Skulking Viper", source = "The Coiled Altar" },
+                { itemID = 268237, slot = "Legs", name = "Skulking Viper's Coiled Legwraps", source = "The Coiled Altar" },
+                { itemID = 271876, slot = "Chest", name = "Skulking Viper's Scuteplate", source = "Ula'tek" },
             },
             dungeons = {
+                { itemID = 193752, slot = "Hands", name = "Skulking Viper's Hidepiercers", source = "Ruby Life Pools" },
             },
         },
         wowheadOverall = {
@@ -1921,10 +1989,18 @@ OakBonusPlannerBIS.Specs = {
         },
         catalyst = {
             overall = {
+                { itemID = 160213, slot = "Hands", name = "Skulking Viper's Hidepiercers", source = "King's Rest" },
+                { itemID = 268231, slot = "Shoulders", name = "Jaws of the Skulking Viper", source = "The Coiled Altar" },
+                { itemID = 268237, slot = "Legs", name = "Skulking Viper's Coiled Legwraps", source = "The Coiled Altar" },
+                { itemID = 271876, slot = "Chest", name = "Skulking Viper's Scuteplate", source = "Ula'tek" },
             },
             raids = {
+                { itemID = 268231, slot = "Shoulders", name = "Jaws of the Skulking Viper", source = "The Coiled Altar" },
+                { itemID = 268237, slot = "Legs", name = "Skulking Viper's Coiled Legwraps", source = "The Coiled Altar" },
+                { itemID = 271876, slot = "Chest", name = "Skulking Viper's Scuteplate", source = "Ula'tek" },
             },
             dungeons = {
+                { itemID = 160213, slot = "Hands", name = "Skulking Viper's Hidepiercers", source = "King's Rest" },
             },
         },
         wowheadOverall = {
@@ -2145,8 +2221,6 @@ OakBonusPlannerBIS.Specs = {
             },
             dungeons = {
                 { itemID = 159234, slot = "Legs", name = "Enveloping Legwraps of the Cosmic Penitent", source = "King's Rest" },
-                { itemID = 159247, slot = "Hands", name = "Cosmic Penitent's Celestial Grips", source = "Temple of Sethraliss" },
-                { itemID = 239032, slot = "Chest", name = "Cosmic Penitent's Eclipsing Robes", source = "Temple of Sethraliss" },
             },
         },
         wowheadOverall = {
@@ -2244,10 +2318,18 @@ OakBonusPlannerBIS.Specs = {
         },
         catalyst = {
             overall = {
+                { itemID = 251160, slot = "Legs", name = "Enveloping Legwraps of the Cosmic Penitent", source = "Den of Nalorakk" },
+                { itemID = 268243, slot = "Hands", name = "Cosmic Penitent's Celestial Grips", source = "The Coiled Altar" },
+                { itemID = 271874, slot = "Helm", name = "Cosmic Penitent's Truesight", source = "Ula'tek" },
+                { itemID = 273785, slot = "Chest", name = "Cosmic Penitent's Eclipsing Robes", source = "Altar of Fangs" },
             },
             raids = {
+                { itemID = 268243, slot = "Hands", name = "Cosmic Penitent's Celestial Grips", source = "The Coiled Altar" },
+                { itemID = 271874, slot = "Helm", name = "Cosmic Penitent's Truesight", source = "Ula'tek" },
             },
             dungeons = {
+                { itemID = 251160, slot = "Legs", name = "Enveloping Legwraps of the Cosmic Penitent", source = "Den of Nalorakk" },
+                { itemID = 273785, slot = "Chest", name = "Cosmic Penitent's Eclipsing Robes", source = "Altar of Fangs" },
             },
         },
         wowheadOverall = {
@@ -2359,10 +2441,8 @@ OakBonusPlannerBIS.Specs = {
                 { itemID = 268225, slot = "Legs", name = "Chosen Bloodslayer's Reinforced Pants", source = "The Coiled Altar" },
             },
             dungeons = {
-                { itemID = 251124, slot = "Hands", name = "Chosen Bloodslayer's Fanged Grips", source = "Murder Row" },
                 { itemID = 251159, slot = "Chest", name = "Chosen Bloodslayer's Banded Poncho", source = "Den of Nalorakk" },
                 { itemID = 251223, slot = "Shoulders", name = "Chosen Bloodslayer's Voodoo Guards", source = "Voidscar Arena" },
-                { itemID = 268225, slot = "Legs", name = "Chosen Bloodslayer's Reinforced Pants", source = "Murder Row" },
             },
         },
         wowheadOverall = {
@@ -2469,10 +2549,8 @@ OakBonusPlannerBIS.Specs = {
                 { itemID = 251226, slot = "Chest", name = "Chosen Bloodslayer's Banded Poncho", source = "Voidscar Arena" },
             },
             raids = {
-                { itemID = 268225, slot = "Legs", name = "Chosen Bloodslayer's Reinforced Pants", source = "The Coiled Altar" },
             },
             dungeons = {
-                { itemID = 159313, slot = "Legs", name = "Chosen Bloodslayer's Reinforced Pants", source = "King's Rest" },
                 { itemID = 251124, slot = "Hands", name = "Chosen Bloodslayer's Fanged Grips", source = "Murder Row" },
                 { itemID = 251223, slot = "Shoulders", name = "Chosen Bloodslayer's Voodoo Guards", source = "Voidscar Arena" },
                 { itemID = 251226, slot = "Chest", name = "Chosen Bloodslayer's Banded Poncho", source = "Voidscar Arena" },
@@ -2584,25 +2662,21 @@ OakBonusPlannerBIS.Specs = {
             raids = {
                 { itemID = 251124, slot = "Hands", name = "Chosen Bloodslayer's Fanged Grips", source = "Sszorak" },
                 { itemID = 268225, slot = "Legs", name = "Chosen Bloodslayer's Reinforced Pants", source = "Coiled Altar" },
-                { itemID = 268235, slot = "Chest", name = "Chosen Bloodslayer's Banded Poncho", source = "King's Rest" },
                 { itemID = 268246, slot = "Shoulders", name = "Chosen Bloodslayer's Voodoo Guards", source = "Vashnik" },
                 { itemID = 271875, slot = "Helm", name = "Chosen Bloodslayer's Spirit Shroud", source = "Ula'tek" },
             },
             dungeons = {
-                { itemID = 251124, slot = "Hands", name = "Chosen Bloodslayer's Fanged Grips", source = "Murder Row" },
-                { itemID = 251130, slot = "Legs", name = "Chosen Bloodslayer's Reinforced Pants", source = "Murder Row" },
-                { itemID = 251140, slot = "Helm", name = "Chosen Bloodslayer's Spirit Shroud", source = "Murder Row" },
-                { itemID = 251159, slot = "Chest", name = "Chosen Bloodslayer's Banded Poncho", source = "Den of Nalorakk" },
-                { itemID = 251223, slot = "Shoulders", name = "Chosen Bloodslayer's Voodoo Guards", source = "Voidscar Arena" },
+                { itemID = 251159, slot = "Chest", name = "Chosen Bloodslayer's Banded Poncho", source = "King's Rest" },
             },
         },
         wowheadOverall = {
             237837,
-            239656,
             240167,
+            244576,
             250259,
             251194,
             252258,
+            268253,
             268256,
             268265,
             270164,
@@ -2688,10 +2762,19 @@ OakBonusPlannerBIS.Specs = {
         catalyst = {
             overall = {
                 { itemID = 160213, slot = "Hands", name = "Hexing Grips of the Ophidian Oracle", source = "Entombed Sentinels" },
+                { itemID = 251220, slot = "Helm", name = "Serpent Crown of the Ophidian Oracle", source = "Voidscar Arena" },
+                { itemID = 268231, slot = "Shoulders", name = "Hissing Mantle of the Ophidian Oracle", source = "The Coiled Altar" },
+                { itemID = 268237, slot = "Legs", name = "Leggings of the Ophidian Oracle", source = "The Coiled Altar" },
+                { itemID = 271876, slot = "Chest", name = "Fanged Raiment of the Ophidian Oracle", source = "Ula'tek" },
             },
             raids = {
+                { itemID = 160213, slot = "Hands", name = "Hexing Grips of the Ophidian Oracle", source = "Entombed Sentinels" },
+                { itemID = 268231, slot = "Shoulders", name = "Hissing Mantle of the Ophidian Oracle", source = "The Coiled Altar" },
+                { itemID = 268237, slot = "Legs", name = "Leggings of the Ophidian Oracle", source = "The Coiled Altar" },
+                { itemID = 271876, slot = "Chest", name = "Fanged Raiment of the Ophidian Oracle", source = "Ula'tek" },
             },
             dungeons = {
+                { itemID = 251220, slot = "Helm", name = "Serpent Crown of the Ophidian Oracle", source = "Voidscar Arena" },
             },
         },
         wowheadOverall = {
@@ -2798,11 +2881,8 @@ OakBonusPlannerBIS.Specs = {
                 { itemID = 271876, slot = "Chest", name = "Fanged Raiment of the Ophidian Oracle", source = "Ula'tek" },
             },
             dungeons = {
-                { itemID = 159375, slot = "Legs", name = "Leggings of the Ophidian Oracle", source = "Temple of Sethraliss" },
                 { itemID = 160213, slot = "Hands", name = "Hexing Grips of the Ophidian Oracle", source = "King's Rest" },
-                { itemID = 239049, slot = "Shoulders", name = "Hissing Mantle of the Ophidian Oracle", source = "King's Rest" },
                 { itemID = 251220, slot = "Helm", name = "Serpent Crown of the Ophidian Oracle", source = "Voidscar Arena" },
-                { itemID = 273789, slot = "Chest", name = "Fanged Raiment of the Ophidian Oracle", source = "Altar of Fangs" },
             },
         },
         wowheadOverall = {
@@ -2874,10 +2954,20 @@ OakBonusPlannerBIS.Specs = {
         },
         catalyst = {
             overall = {
+                { itemID = 159375, slot = "Legs", name = "Leggings of the Ophidian Oracle", source = "Temple of Sethraliss" },
+                { itemID = 251131, slot = "Shoulders", name = "Hissing Mantle of the Ophidian Oracle", source = "Murder Row" },
+                { itemID = 251165, slot = "Hands", name = "Hexing Grips of the Ophidian Oracle", source = "The Blinding Vale" },
+                { itemID = 268230, slot = "Helm", name = "Serpent Crown of the Ophidian Oracle", source = "Nek'zali the Soulcoiler" },
+                { itemID = 271876, slot = "Chest", name = "Fanged Raiment of the Ophidian Oracle", source = "Ula'tek" },
             },
             raids = {
+                { itemID = 268230, slot = "Helm", name = "Serpent Crown of the Ophidian Oracle", source = "Nek'zali the Soulcoiler" },
+                { itemID = 271876, slot = "Chest", name = "Fanged Raiment of the Ophidian Oracle", source = "Ula'tek" },
             },
             dungeons = {
+                { itemID = 159375, slot = "Legs", name = "Leggings of the Ophidian Oracle", source = "Temple of Sethraliss" },
+                { itemID = 251131, slot = "Shoulders", name = "Hissing Mantle of the Ophidian Oracle", source = "Murder Row" },
+                { itemID = 251165, slot = "Hands", name = "Hexing Grips of the Ophidian Oracle", source = "The Blinding Vale" },
             },
         },
         wowheadOverall = {
@@ -3286,10 +3376,12 @@ OakBonusPlannerBIS.Specs = {
         },
         catalyst = {
             overall = {
+                { itemID = 193758, slot = "Hands", name = "Monkey King's Fighting Fists", source = "Ruby Life Pools" },
             },
             raids = {
             },
             dungeons = {
+                { itemID = 193758, slot = "Hands", name = "Monkey King's Fighting Fists", source = "Ruby Life Pools" },
             },
         },
         wowheadOverall = {
@@ -3449,11 +3541,11 @@ OakBonusPlannerBIS.Specs = {
         icyVeinsURL = "https://www.icy-veins.com/wow/mistweaver-monk-pve-healing-gear-best-in-slot",
         wowheadURL = "https://www.wowhead.com/guide/classes/monk/mistweaver/bis-gear",
         overall = {
+            { itemID = 159301, slot = "Waist", name = "Primal Dinomancer's Belt", source = "King's Rest" },
+            { itemID = 159459, slot = "Ring", name = "Ritual Binder's Ring", source = "King's Rest" },
             { itemID = 239656, slot = "Cloak", name = "Adherent's Silken Shroud", source = "Crafted by Tailoring" },
             { itemID = 244576, slot = "Bracers", name = "Silvermoon Agent's Deflectors", source = "Crafted by Leatherworking" },
             { itemID = 268211, slot = "Main Hand", name = "Baleful Hexblade", source = "Coiled Altar" },
-            { itemID = 268252, slot = "Ring", name = "Apex Brute's Claw Ring", source = "Sszorak" },
-            { itemID = 268256, slot = "Waist", name = "Sash of the Forlorn Vessel", source = "Coiled Altar" },
             { itemID = 268261, slot = "Feet", name = "Bespittled Slitherslippers", source = "Twin Fangs" },
             { itemID = 268265, slot = "Neck", name = "Aqirbane Reliquary", source = "Ula'tek" },
             { itemID = 268266, slot = "Ring", name = "Alluring Bubbleband", source = "Nymrissa Wavecaller" },
@@ -3507,10 +3599,16 @@ OakBonusPlannerBIS.Specs = {
         },
         catalyst = {
             overall = {
+                { itemID = 251223, slot = "Shoulders", name = "Tassels of the Monkey King", source = "Voidscar Arena" },
+                { itemID = 251226, slot = "Chest", name = "Battle Gi of the Monkey King", source = "Voidscar Arena" },
+                { itemID = 268225, slot = "Legs", name = "Pantaloons of the Monkey King", source = "The Coiled Altar" },
             },
             raids = {
+                { itemID = 268225, slot = "Legs", name = "Pantaloons of the Monkey King", source = "The Coiled Altar" },
             },
             dungeons = {
+                { itemID = 251223, slot = "Shoulders", name = "Tassels of the Monkey King", source = "Voidscar Arena" },
+                { itemID = 251226, slot = "Chest", name = "Battle Gi of the Monkey King", source = "Voidscar Arena" },
             },
         },
         wowheadOverall = {
@@ -3625,16 +3723,11 @@ OakBonusPlannerBIS.Specs = {
             },
             raids = {
                 { itemID = 268225, slot = "Legs", name = "Abyssal Doomhound's Legwraps", source = "Coiled Altar" },
-                { itemID = 268235, slot = "Chest", name = "Abyssal Doomhound's Coreguard", source = "Nek'zali" },
                 { itemID = 268246, slot = "Shoulders", name = "Abyssal Doomhound's Jaws", source = "Vashnik" },
                 { itemID = 271875, slot = "Helm", name = "Abyssal Doomhound's Relentless Stare", source = "Ula'tek" },
             },
             dungeons = {
-                { itemID = 159312, slot = "Hands", name = "Abyssal Doomhound's Studded Gauntlets", source = "King's Rest" },
-                { itemID = 239033, slot = "Helm", name = "Abyssal Doomhound's Relentless Stare", source = "Temple of Sethraliss" },
                 { itemID = 239048, slot = "Chest", name = "Abyssal Doomhound's Coreguard", source = "King's Rest" },
-                { itemID = 251130, slot = "Legs", name = "Abyssal Doomhound's Legwraps", source = "Murder Row" },
-                { itemID = 251223, slot = "Shoulders", name = "Abyssal Doomhound's Jaws", source = "Voidscar Arena" },
             },
         },
         wowheadOverall = {
@@ -3735,10 +3828,18 @@ OakBonusPlannerBIS.Specs = {
         },
         catalyst = {
             overall = {
+                { itemID = 251124, slot = "Hands", name = "Abyssal Doomhound's Studded Gauntlets", source = "Murder Row" },
+                { itemID = 251146, slot = "Shoulders", name = "Abyssal Doomhound's Jaws", source = "Den of Nalorakk" },
+                { itemID = 268225, slot = "Legs", name = "Abyssal Doomhound's Legwraps", source = "The Coiled Altar" },
+                { itemID = 271875, slot = "Helm", name = "Abyssal Doomhound's Relentless Stare", source = "Ula'tek" },
             },
             raids = {
+                { itemID = 268225, slot = "Legs", name = "Abyssal Doomhound's Legwraps", source = "The Coiled Altar" },
+                { itemID = 271875, slot = "Helm", name = "Abyssal Doomhound's Relentless Stare", source = "Ula'tek" },
             },
             dungeons = {
+                { itemID = 251124, slot = "Hands", name = "Abyssal Doomhound's Studded Gauntlets", source = "Murder Row" },
+                { itemID = 251146, slot = "Shoulders", name = "Abyssal Doomhound's Jaws", source = "Den of Nalorakk" },
             },
         },
         wowheadOverall = {
@@ -3955,13 +4056,10 @@ OakBonusPlannerBIS.Specs = {
             },
             raids = {
                 { itemID = 268237, slot = "Legs", name = "Earthen Pillars of Calamity", source = "Coiled Altar" },
-                { itemID = 268238, slot = "Hands", name = "Calamitous Echo's Ebon Greathorns", source = "Nymrissa Wavecaller" },
                 { itemID = 271876, slot = "Chest", name = "Searing Caldera of Calamity", source = "Ula'tek" },
             },
             dungeons = {
-                { itemID = 159375, slot = "Legs", name = "Earthen Pillars of Calamity", source = "Temple of Sethraliss" },
-                { itemID = 160213, slot = "Hands", name = "Calamitous Echo's Ebon Greathorns", source = "King's Rest" },
-                { itemID = 239034, slot = "Chest", name = "Searing Caldera of Calamity", source = "Temple of Sethraliss" },
+                { itemID = 251165, slot = "Hands", name = "Calamitous Echo's Ebon Greathorns", source = "The Blinding Vale" },
             },
         },
         wowheadOverall = {
@@ -4017,11 +4115,11 @@ OakBonusPlannerBIS.Specs = {
             { itemID = 268265, slot = "Neck", name = "Aqirbane Reliquary", source = "Ula'tek" },
             { itemID = 270164, slot = "Trinket", name = "Gebbo's Bottomless Bag", source = "Lost Explorers" },
             { itemID = 271092, slot = "Main Hand", name = "Jan'thrazet, the Soul Fang", source = "Ula'tek" },
-            { itemID = 271499, slot = "Shoulders", name = "Calamitous Echo's Sundered Peaks", source = "Coiled Altar then catalyst" },
-            { itemID = 271500, slot = "Legs", name = "Earthen Pillars of Calamity", source = "Coiled Altar then catalyst" },
-            { itemID = 271501, slot = "Helm", name = "Calamitous Echo's Magmashapers", source = "Temple of Sethraliss then catalyst" },
-            { itemID = 271502, slot = "Hands", name = "Calamitous Echo's Ebon Greathorns", source = "Ruby Life Pools then catalyst" },
-            { itemID = 271504, slot = "Chest", name = "Searing Caldera of Calamity", source = "Ula'tek then catalyst" },
+            { itemID = 271499, slot = "Shoulders", name = "Calamitous Echo's Sundered Peaks", source = "Catalyst from Coiled Altar" },
+            { itemID = 271500, slot = "Legs", name = "Earthen Pillars of Calamity", source = "Catalyst from Coiled Altar" },
+            { itemID = 271501, slot = "Helm", name = "Calamitous Echo's Magmashapers", source = "Catalyst from Temple of Sethraliss" },
+            { itemID = 271502, slot = "Hands", name = "Calamitous Echo's Ebon Greathorns", source = "Catalyst from Ruby Life Pools" },
+            { itemID = 271504, slot = "Chest", name = "Searing Caldera of Calamity", source = "Catalyst from Ula'tek" },
         },
         raids = {
             { itemID = 244584, slot = "Bracers", name = "Farstrider's Plated Bracers", source = "Crafted by Leatherworking" },
@@ -4035,11 +4133,11 @@ OakBonusPlannerBIS.Specs = {
             { itemID = 270164, slot = "Trinket", name = "Gebbo's Bottomless Bag", source = "Lost Explorers" },
             { itemID = 270170, slot = "Trinket", name = "Vexhul's Everflowing Gland", source = "Twin Fangs" },
             { itemID = 271092, slot = "Main Hand", name = "Jan'thrazet, the Soul Fang", source = "Ula'tek" },
-            { itemID = 271499, slot = "Shoulders", name = "Calamitous Echo's Sundered Peaks", source = "Coiled Altar then catalyst" },
-            { itemID = 271500, slot = "Legs", name = "Earthen Pillars of Calamity", source = "Coiled Altar then catalyst" },
-            { itemID = 271501, slot = "Helm", name = "Calamitous Echo's Magmashapers", source = "Nek'zali then catalyst" },
+            { itemID = 271499, slot = "Shoulders", name = "Calamitous Echo's Sundered Peaks", source = "Catalyst from Coiled Altar" },
+            { itemID = 271500, slot = "Legs", name = "Earthen Pillars of Calamity", source = "Catalyst from Coiled Altar" },
+            { itemID = 271501, slot = "Helm", name = "Calamitous Echo's Magmashapers", source = "Catalyst from Nek'zali" },
             { itemID = 271502, slot = "Hands", name = "Calamitous Echo's Ebon Greathorns", source = "Entombed Sentinels" },
-            { itemID = 271504, slot = "Chest", name = "Searing Caldera of Calamity", source = "Ula'tek then catalyst" },
+            { itemID = 271504, slot = "Chest", name = "Searing Caldera of Calamity", source = "Catalyst from Ula'tek" },
         },
         dungeons = {
             { itemID = 158366, slot = "Ring", name = "Charged Sandstone Band", source = "Temple of Sethraliss" },
@@ -4048,15 +4146,15 @@ OakBonusPlannerBIS.Specs = {
             { itemID = 245769, slot = "Off Hand", name = "Aln'hara Lantern", source = "Crafted by Inscription" },
             { itemID = 250215, slot = "Trinket", name = "Freightrunner's Flask", source = "Murder Row" },
             { itemID = 250224, slot = "Trinket", name = "Mindpiercer's Sigil", source = "Voidscar Arena" },
-            { itemID = 251132, slot = "Cloak", name = "Speakeasy Shroud", source = "Coiled Altar" },
-            { itemID = 251136, slot = "Ring", name = "Signet of Snarling Servitude", source = "Vashnik" },
+            { itemID = 251132, slot = "Cloak", name = "Speakeasy Shroud", source = "Murder Row" },
+            { itemID = 251136, slot = "Ring", name = "Signet of Snarling Servitude", source = "Murder Row" },
             { itemID = 251142, slot = "Neck", name = "Pendant of Malefic Fury", source = "Murder Row" },
             { itemID = 251228, slot = "Waist", name = "Behemoth Waistband", source = "Voidscar Arena" },
-            { itemID = 271499, slot = "Shoulders", name = "Calamitous Echo's Sundered Peaks", source = "King's Rest then catalyst" },
-            { itemID = 271500, slot = "Legs", name = "Earthen Pillars of Calamity", source = "Temple of Sethraliss then catalyst" },
-            { itemID = 271501, slot = "Helm", name = "Calamitous Echo's Magmashapers", source = "Temple of Sethraliss then catalyst" },
-            { itemID = 271502, slot = "Hands", name = "Calamitous Echo's Ebon Greathorns", source = "Ruby Life Pools then catalyst" },
-            { itemID = 271504, slot = "Chest", name = "Searing Caldera of Calamity", source = "Voidscar Arena then catalyst" },
+            { itemID = 271499, slot = "Shoulders", name = "Calamitous Echo's Sundered Peaks", source = "Catalyst from King's Rest" },
+            { itemID = 271500, slot = "Legs", name = "Earthen Pillars of Calamity", source = "Catalyst from Temple of Sethraliss" },
+            { itemID = 271501, slot = "Helm", name = "Calamitous Echo's Magmashapers", source = "Catalyst from Temple of Sethraliss" },
+            { itemID = 271502, slot = "Hands", name = "Calamitous Echo's Ebon Greathorns", source = "Catalyst from Ruby Life Pools" },
+            { itemID = 271504, slot = "Chest", name = "Searing Caldera of Calamity", source = "Catalyst from Voidscar Arena" },
             { itemID = 273778, slot = "Main Hand", name = "Polished Lightwood Channeler", source = "Altar of Fangs" },
         },
         crafted = {
@@ -4065,10 +4163,20 @@ OakBonusPlannerBIS.Specs = {
         },
         catalyst = {
             overall = {
+                { itemID = 193752, slot = "Hands", name = "Calamitous Echo's Ebon Greathorns", source = "Ruby Life Pools" },
+                { itemID = 239035, slot = "Helm", name = "Calamitous Echo's Magmashapers", source = "Temple of Sethraliss" },
+                { itemID = 268231, slot = "Shoulders", name = "Calamitous Echo's Sundered Peaks", source = "Coiled Altar" },
+                { itemID = 268237, slot = "Legs", name = "Earthen Pillars of Calamity", source = "Coiled Altar" },
+                { itemID = 271876, slot = "Chest", name = "Searing Caldera of Calamity", source = "Ula'tek" },
             },
             raids = {
+                { itemID = 268231, slot = "Shoulders", name = "Calamitous Echo's Sundered Peaks", source = "Coiled Altar" },
+                { itemID = 268237, slot = "Legs", name = "Earthen Pillars of Calamity", source = "Coiled Altar" },
+                { itemID = 271876, slot = "Chest", name = "Searing Caldera of Calamity", source = "Ula'tek" },
             },
             dungeons = {
+                { itemID = 193752, slot = "Hands", name = "Calamitous Echo's Ebon Greathorns", source = "Ruby Life Pools" },
+                { itemID = 239035, slot = "Helm", name = "Calamitous Echo's Magmashapers", source = "Temple of Sethraliss" },
             },
         },
         wowheadOverall = {
@@ -4195,15 +4303,10 @@ OakBonusPlannerBIS.Specs = {
             },
             raids = {
                 { itemID = 268225, slot = "Legs", name = "Abyssal Doomhound's Legwraps", source = "Coiled Altar" },
-                { itemID = 268235, slot = "Chest", name = "Abyssal Doomhound's Coreguard", source = "Nek'zali" },
-                { itemID = 268246, slot = "Shoulders", name = "Abyssal Doomhound's Jaws", source = "Vashnik" },
                 { itemID = 271875, slot = "Helm", name = "Abyssal Doomhound's Relentless Stare", source = "Ula'tek" },
             },
             dungeons = {
-                { itemID = 159312, slot = "Hands", name = "Abyssal Doomhound's Studded Gauntlets", source = "King's Rest" },
-                { itemID = 239033, slot = "Helm", name = "Abyssal Doomhound's Relentless Stare", source = "Temple of Sethraliss" },
-                { itemID = 251130, slot = "Legs", name = "Abyssal Doomhound's Legwraps", source = "Murder Row" },
-                { itemID = 251159, slot = "Chest", name = "Abyssal Doomhound's Coreguard", source = "Den of Nalorakk" },
+                { itemID = 251159, slot = "Chest", name = "Abyssal Doomhound's Coreguard", source = "King's Rest" },
                 { itemID = 251223, slot = "Shoulders", name = "Abyssal Doomhound's Jaws", source = "Voidscar Arena" },
             },
         },

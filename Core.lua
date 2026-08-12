@@ -29,6 +29,7 @@ addonTable.CharDB.bonusRolls = addonTable.CharDB.bonusRollsBySeason[seasonID]
 addonTable.ItemNames = addonTable.ItemNames or {}
 
 local resolvingItems = {}
+local runtimeSlotCache = {}
 local Loot = OakBonusPlannerLoot or {}
 local sourceRecommendationCache = {}
 local bonusRollScanToken = 0
@@ -164,6 +165,48 @@ local function GetItemTexture(itemID)
         return C_Item.GetItemIconByID(itemID)
     end
     return _G.GetItemIcon and _G.GetItemIcon(itemID)
+end
+
+local inventorySlotMap = {
+    ["INVTYPE_HEAD"] = 0,
+    ["INVTYPE_NECK"] = 1,
+    ["INVTYPE_SHOULDER"] = 2,
+    ["INVTYPE_CLOAK"] = 3,
+    ["INVTYPE_CHEST"] = 4,
+    ["INVTYPE_ROBE"] = 4,
+    ["INVTYPE_WAIST"] = 5,
+    ["INVTYPE_WRIST"] = 6,
+    ["INVTYPE_HAND"] = 7,
+    ["INVTYPE_LEGS"] = 8,
+    ["INVTYPE_FEET"] = 9,
+    ["INVTYPE_WEAPON"] = 10,
+    ["INVTYPE_2HWEAPON"] = 10,
+    ["INVTYPE_WEAPONMAINHAND"] = 10,
+    ["INVTYPE_RANGED"] = 10,
+    ["INVTYPE_RANGEDRIGHT"] = 10,
+    ["INVTYPE_THROWN"] = 10,
+    ["INVTYPE_RELIC"] = 10,
+    ["INVTYPE_FINGER"] = 11,
+    ["INVTYPE_TRINKET"] = 12,
+    ["INVTYPE_HOLDABLE"] = 13,
+    ["INVTYPE_SHIELD"] = 13,
+    ["INVTYPE_WEAPONOFFHAND"] = 13,
+}
+
+-- The imported eligibility database is intentionally static, but item slots
+-- are cheap, authoritative client data. Prefer Blizzard's inventory type for
+-- display so a stale generated slot cannot label a trinket as an off hand.
+local function GetDisplaySlotID(itemID, fallback)
+    local cached = runtimeSlotCache[itemID]
+    if cached ~= nil then return cached end
+    local getInstant = C_Item and C_Item.GetItemInfoInstant or GetItemInfoInstant
+    local equipLoc = getInstant and select(4, getInstant(itemID))
+    local slotID = equipLoc and inventorySlotMap[equipLoc]
+    if slotID then
+        runtimeSlotCache[itemID] = slotID
+        return slotID
+    end
+    return fallback
 end
 
 function addonTable.GetMaxItemLevel(slotID, isCrafted, slotName)
@@ -1093,7 +1136,8 @@ local function AddSourceItems(stats, targetSpecID)
     for itemID in pairs(stats.pool) do
         local itemInfo = GetLootItemInfo(itemID)
         local tierToken = GetTierTokenInfo(stats.source, itemID)
-        local slotID = tierToken and tierToken.slotID or itemInfo and itemInfo.slotId
+        local slotID = tierToken and tierToken.slotID
+            or GetDisplaySlotID(itemID, itemInfo and itemInfo.slotId)
         local isTierToken = tierToken ~= nil
         table.insert(items, {
             itemID = itemID,
@@ -1107,7 +1151,7 @@ local function AddSourceItems(stats, targetSpecID)
             isCatalyst = stats.catalyst[itemID] == true,
             isTierToken = isTierToken,
             isWon = IsItemWon(itemID),
-            maxItemLevel = addonTable.GetMaxItemLevel(itemInfo and itemInfo.slotId, false),
+            maxItemLevel = addonTable.GetMaxItemLevel(slotID, false),
             maxItemLinkKind = isTierToken and "raid"
                 or (stats.catalyst[itemID] and "catalyst"
                 or (stats.source.challengeModeID and "dungeon"
