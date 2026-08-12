@@ -526,8 +526,8 @@ CreateLegendEntry("Unwanted", "unwanted", 76, "Unwanted loot", "Eligible pool lo
 CreateLegendEntry("Won", "won", 52, "Already won", "This item was already received from a bonus roll and is removed from the pool.", 216)
 
 local bonusRollCountFrame = CreateFrame("Frame", nil, panel)
-bonusRollCountFrame:SetSize(120, 20)
-bonusRollCountFrame:SetPoint("RIGHT", panel, "BOTTOMRIGHT", -118, 16)
+bonusRollCountFrame:SetSize(142, 20)
+bonusRollCountFrame:SetPoint("BOTTOMRIGHT", panel, "BOTTOMRIGHT", -132, 7)
 bonusRollCountFrame:EnableMouse(true)
 local bonusRollCount = bonusRollCountFrame:CreateFontString(nil, "OVERLAY")
 bonusRollCount:SetAllPoints()
@@ -553,7 +553,7 @@ currencyWatcher:SetScript("OnEvent", function(_, _, currencyID)
 end)
 
 local footerControls = CreateFrame("Frame", nil, panel)
-footerControls:SetSize(132, 22)
+footerControls:SetSize(102, 22)
 footerControls:SetPoint("BOTTOMRIGHT", panel, "BOTTOMRIGHT", -26, 6)
 footerControls:SetFrameLevel(panel:GetFrameLevel() + 6)
 
@@ -582,23 +582,17 @@ end
 
 local optionsButton = CreateCogButton(footerControls, 22)
 optionsButton:SetPoint("RIGHT", footerControls, "RIGHT", 0, 0)
-local resetButton = CreateClassicButton(footerControls, "Reset", 48, 22)
-resetButton:SetPoint("RIGHT", optionsButton, "LEFT", -4, 0)
-resetButton:SetTooltip("Reset bonus-roll history", "Clears items recorded as already won by bonus roll for this season.")
-local rescanButton = CreateClassicButton(footerControls, "Rescan", 52, 22)
-rescanButton:SetPoint("RIGHT", resetButton, "LEFT", -4, 0)
-rescanButton:SetTooltip("Rescan prior bonus-roll wins", "Rechecks Blizzard's Season 2 Voidcache tooltips for the character's current loot specialization. This can recover rolls made before Oak Bonus Planner was installed.")
+local rescanButton = CreateClassicButton(footerControls, "Reset + Rescan", 76, 22)
+rescanButton:SetPoint("RIGHT", optionsButton, "LEFT", -4, 0)
+rescanButton:SetTooltip("Reset and rescan bonus-roll history", "Clears the locally recorded won items, then rebuilds them from Blizzard's Season 2 Voidcache tooltips for your current loot specialization.")
 optionsButton:SetScript("OnClick", function()
     HideMenus()
     if addonTable.ToggleOptions then addonTable.ToggleOptions() end
 end)
-resetButton:SetScript("OnClick", function()
+rescanButton:SetScript("OnClick", function()
     HideMenus()
     addonTable.ResetObtained()
     addonTable.Refresh()
-end)
-rescanButton:SetScript("OnClick", function()
-    HideMenus()
     if addonTable.ScanBonusRollHistory then addonTable.ScanBonusRollHistory(true) end
 end)
 
