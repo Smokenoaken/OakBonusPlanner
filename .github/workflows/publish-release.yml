@@ -1,0 +1,72 @@
+name: Publish Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing release tag to package and publish
+        required: true
+        default: v0.5.0
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    env:
+      CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+      WAGO_API_TOKEN: ${{ secrets.WAGO_API_TOKEN }}
+
+    steps:
+      - name: Check out release tag
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event_name == 'workflow_dispatch' && format('refs/tags/{0}', inputs.tag) || github.ref }}
+
+      - name: Package addon for GitHub
+        id: package
+        shell: pwsh
+        run: |
+          $tag = "${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}"
+          $version = $tag -replace '^v', ''
+          ./package-release.ps1 -Version $version
+          "zip=dist/OakBonusPlanner-v$version.zip" >> $env:GITHUB_OUTPUT
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}"
+          if gh release view "$tag" --repo "${{ github.repository }}" >/dev/null 2>&1; then
+            gh release upload "$tag" "${{ steps.package.outputs.zip }}" --clobber --repo "${{ github.repository }}"
+          else
+            gh release create "$tag" "${{ steps.package.outputs.zip }}" \
+              --repo "${{ github.repository }}" \
+              --title "Oak Bonus Planner $tag" \
+              --generate-notes
+          fi
+
+      - name: Publish to CurseForge and Wago
+        if: ${{ env.CF_API_TOKEN != '' || env.WAGO_API_TOKEN != '' }}
+        uses: BigWigsMods/packager@v2
+        with:
+          args: -p 1649769 -a qKQmEDKx
+        env:
+          CF_API_TOKEN: ${{ env.CF_API_TOKEN }}
+          WAGO_API_TOKEN: ${{ env.WAGO_API_TOKEN }}
+
+      - name: Report missing marketplace credentials
+        if: ${{ env.CF_API_TOKEN == '' || env.WAGO_API_TOKEN == '' }}
+        shell: bash
+        run: |
+          if [[ -z "$CF_API_TOKEN" ]]; then
+            echo "::warning::CF_API_TOKEN is not configured; CurseForge was skipped."
+          fi
+          if [[ -z "$WAGO_API_TOKEN" ]]; then
+            echo "::warning::WAGO_API_TOKEN is not configured; Wago was skipped."
+          fi

@@ -4,6 +4,7 @@
 ## Author: Smokenoaken
 ## IconTexture: Interface\AddOns\OakBonusPlanner\Media\icon.png
 ## Version: 0.5.0
+## X-Curse-Project-ID: 1649769
 ## X-Wago-ID: qKQmEDKx
 ## SavedVariables: OakBonusPlannerDB
 ## SavedVariablesPerCharacter: OakBonusPlannerCharDB
