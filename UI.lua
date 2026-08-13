@@ -6,18 +6,23 @@ local CLASSIC_GOLD = { 1.00, 0.82, 0.00, 1 }
 local CLASSIC_RED = { 0.90, 0.20, 0.08, 1 }
 local CLASSIC_ROW_A = { 0.16, 0.16, 0.16, 0.94 }
 local CLASSIC_ROW_B = { 0.105, 0.105, 0.105, 0.94 }
+local MIN_WINDOW_WIDTH = 660
+local MIN_WINDOW_HEIGHT = 470
 
 local panel = CreateFrame("Frame", "OakBonusPlannerFrame", UIParent, "ButtonFrameTemplate")
 addonTable.Frame = panel
-panel:SetSize(addonTable.DB.size.width or 610, addonTable.DB.size.height or 620)
+local savedSize = addonTable.DB.size
+savedSize.width = math.max(MIN_WINDOW_WIDTH, tonumber(savedSize.width) or MIN_WINDOW_WIDTH)
+savedSize.height = math.max(MIN_WINDOW_HEIGHT, tonumber(savedSize.height) or 620)
+panel:SetSize(savedSize.width, savedSize.height)
 panel:SetFrameStrata("DIALOG")
 panel:SetClampedToScreen(true)
 panel:SetMovable(true)
 panel:SetResizable(true)
 if panel.SetResizeBounds then
-    panel:SetResizeBounds(500, 470, 1100, 900)
+    panel:SetResizeBounds(MIN_WINDOW_WIDTH, MIN_WINDOW_HEIGHT, 1100, 900)
 else
-    panel:SetMinResize(500, 470)
+    panel:SetMinResize(MIN_WINDOW_WIDTH, MIN_WINDOW_HEIGHT)
     panel:SetMaxResize(1100, 900)
 end
 panel:EnableMouse(true)
@@ -33,7 +38,7 @@ end
 
 local position = addonTable.DB.position
 panel:SetPoint(position.point or "CENTER", UIParent, position.point or "CENTER", position.x or 0, position.y or 0)
-panel:SetScale(addonTable.DB.scale)
+panel:SetScale(addonTable.GetPlannerScale())
 panel:Hide()
 tinsert(UISpecialFrames, "OakBonusPlannerFrame")
 
@@ -933,6 +938,7 @@ end
 
 panel:SetScript("OnShow", function()
     headerLogo:Show()
+    panel:SetScale(addonTable.GetPlannerScale())
     currencyWatcher:RegisterEvent("CURRENCY_DISPLAY_UPDATE")
     UpdateBonusRollCount()
     if addonTable.ScanBonusRollHistory then addonTable.ScanBonusRollHistory(false) end

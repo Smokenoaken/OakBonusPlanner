@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.5.0-beta.7
+
+- Fixed the planner scale setting so it persists after reloads, relogs, and client restarts.
+- Reapplies the saved account-wide planner scale whenever the planner opens.
+- Prevented scale-slider initialization from overwriting a saved scale.
+- Enforced the tested minimum window width so the footer controls and Voidcore count remain visible.
+
 ## v0.5.0-beta.6
 
 - Fixed the Supporters panel list overlapping its social-link controls.

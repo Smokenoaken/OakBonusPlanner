@@ -13,7 +13,15 @@ DB.obtainedItems = DB.obtainedItems or {}
 DB.obtainedNames = DB.obtainedNames or {}
 DB.bisOverrides = DB.bisOverrides or {}
 DB.position = DB.position or { point = "CENTER", x = 0, y = 0 }
-DB.scale = math.max(0.75, math.min(1.50, tonumber(DB.scale) or 1))
+local function NormalizePlannerScale(value)
+    value = tonumber((tostring(value or 1):gsub("%%", ""))) or 1
+    if value > 2 then value = value / 100 end
+    return math.floor((math.max(0.75, math.min(1.50, value)) * 20) + 0.5) / 20
+end
+
+-- Keep this in the same account-wide saved field used by Oak LFG Sorter.
+-- A scale is a window preference, never per-character state.
+DB.scale = NormalizePlannerScale(DB.scale)
 DB.hideMinimapButton = DB.hideMinimapButton == true
 DB.minimapButton = type(DB.minimapButton) == "table" and DB.minimapButton or {}
 DB.size = type(DB.size) == "table" and DB.size or { width = 610, height = 620 }
@@ -54,12 +62,30 @@ addonTable.Fonts = {
 }
 
 function addonTable.SetPlannerScale(value)
-    value = tonumber(value) or 1
-    value = math.floor((math.max(0.75, math.min(1.50, value)) * 20) + 0.5) / 20
+    value = NormalizePlannerScale(value)
+    -- Write through the SavedVariables global as well as the local alias. This
+    -- is intentionally direct: WoW serializes OakBonusPlannerDB on reload,
+    -- logout, and client exit.
+    OakBonusPlannerDB.scale = value
     DB.scale = value
     if addonTable.Frame then addonTable.Frame:SetScale(value) end
     return value
 end
+
+function addonTable.GetPlannerScale()
+    return NormalizePlannerScale(OakBonusPlannerDB.scale or DB.scale)
+end
+
+-- The slider writes immediately on mouse release, like Oak LFG Sorter. Save
+-- the frame's actual scale again on reload/logout as a final backstop for
+-- Blizzard slider-template edge cases (clicking the track, UI reloads, etc.).
+local scalePersistence = CreateFrame("Frame")
+scalePersistence:RegisterEvent("PLAYER_LOGOUT")
+scalePersistence:SetScript("OnEvent", function()
+    if addonTable.Frame then
+        addonTable.SetPlannerScale(addonTable.Frame:GetScale())
+    end
+end)
 
 function addonTable.ApplyFont(fontString, kind)
     if fontString and addonTable.Fonts[kind or "regular"] then

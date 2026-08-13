@@ -87,15 +87,29 @@ scaleSlider.Low:SetText("75%")
 scaleSlider.High:SetText("150%")
 scaleSlider.Text:SetText("")
 
-local function ApplyScale(value)
-    local scale = addonTable.SetPlannerScale(value)
-    scaleSlider:SetValue(scale)
+local function UpdateScaleText(value)
+    local scale = addonTable.GetPlannerScale()
+    if value then
+        scale = math.floor((value * 20) + 0.5) / 20
+    end
     scaleValue:SetText(string.format("%d%%", scale * 100 + 0.5))
 end
 
+-- Set the initial value before registering handlers. OptionsSliderTemplate may
+-- fire OnValueChanged while it is being built; that must not overwrite a saved
+-- scale before the player has touched the control.
+scaleSlider:SetValue(addonTable.GetPlannerScale())
+UpdateScaleText()
+
+scaleSlider:SetScript("OnMouseUp", function(self)
+    -- Match Oak LFG Sorter's scale behavior: commit once the player releases
+    -- the slider, then apply the exact value that was persisted.
+    local scale = addonTable.SetPlannerScale(self:GetValue())
+    self:SetValue(scale)
+    UpdateScaleText(scale)
+end)
 scaleSlider:SetScript("OnValueChanged", function(_, value)
-    local scale = addonTable.SetPlannerScale(value)
-    scaleValue:SetText(string.format("%d%%", scale * 100 + 0.5))
+    UpdateScaleText(value)
 end)
 scaleSlider:SetScript("OnEnter", function(self)
     GameTooltip:SetOwner(self, "ANCHOR_TOP")
@@ -107,11 +121,15 @@ scaleSlider:SetScript("OnLeave", function() GameTooltip:Hide() end)
 scaleValue:SetScript("OnEnterPressed", function(self)
     local text = string.gsub(self:GetText() or "", "%%", "")
     local value = tonumber(text)
-    if value then ApplyScale(value / 100) else ApplyScale(addonTable.DB.scale) end
+    local scale = addonTable.SetPlannerScale(value and (value / 100) or addonTable.GetPlannerScale())
+    scaleSlider:SetValue(scale)
+    UpdateScaleText(scale)
     self:ClearFocus()
 end)
 scaleValue:SetScript("OnEscapePressed", function(self)
-    ApplyScale(addonTable.DB.scale)
+    local scale = addonTable.GetPlannerScale()
+    scaleSlider:SetValue(scale)
+    UpdateScaleText(scale)
     self:ClearFocus()
 end)
 
@@ -125,7 +143,10 @@ slashHint:SetText("Commands: /obp to open the planner  •  /obp options")
 
 local function RefreshOptions()
     minimapCheck:SetChecked(addonTable.DB.hideMinimapButton ~= true)
-    ApplyScale(addonTable.DB.scale)
+    -- Refreshing controls only reads the account-wide saved setting.
+    local scale = addonTable.GetPlannerScale()
+    scaleSlider:SetValue(scale)
+    UpdateScaleText(scale)
 end
 
 function addonTable.ToggleOptions()
