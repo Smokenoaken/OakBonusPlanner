@@ -1,43 +1,34 @@
-name: Wago Release
+name: Publish GitHub Release
 
 on:
   push:
     tags:
       - "v*"
-  workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   publish:
     runs-on: ubuntu-latest
-    env:
-      WAGO_API_TOKEN: ${{ secrets.WAGO_API_TOKEN }}
 
     steps:
-      - name: Check out repository
+      - name: Check out release tag
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
-      - name: Detect Wago project ID
-        id: wago
-        shell: bash
+      - name: Package addon
+        id: package
+        shell: pwsh
         run: |
-          toc_file="OakBonusPlanner.toc"
-          wago_id="$(sed -n 's/^## X-Wago-ID:[[:space:]]*//p' "$toc_file" | head -n 1)"
-          if [[ -z "$wago_id" ]]; then
-            echo "found=false" >> "$GITHUB_OUTPUT"
-            echo "::warning::Wago upload is not configured: add X-Wago-ID to $toc_file."
-            exit 0
-          fi
+          ./package-release.ps1 -Version "${{ github.ref_name }}"
+          "zip=dist/OakBonusPlanner-${{ github.ref_name }}.zip" >> $env:GITHUB_OUTPUT
 
-          echo "found=true" >> "$GITHUB_OUTPUT"
-
-      - name: Package and publish to Wago
-        if: ${{ steps.wago.outputs.found == 'true' && env.WAGO_API_TOKEN != '' }}
-        uses: BigWigsMods/packager@v2
+      - name: Create prerelease
         env:
-          WAGO_API_TOKEN: ${{ env.WAGO_API_TOKEN }}
-
-      - name: Missing Wago token
-        if: ${{ steps.wago.outputs.found == 'true' && env.WAGO_API_TOKEN == '' }}
-        run: echo "::warning::WAGO_API_TOKEN is not set, so this tag was not published to Wago."
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${{ github.ref_name }}" "${{ steps.package.outputs.zip }}" \
+            --repo "${{ github.repository }}" \
+            --title "Oak Bonus Planner ${{ github.ref_name }}" \
+            --prerelease \
+            --generate-notes
