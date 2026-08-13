@@ -29,11 +29,11 @@ $zip = [System.IO.Compression.ZipFile]::Open($zipPath, [System.IO.Compression.Zi
 
 try {
     Get-ChildItem -LiteralPath $addonRoot -Recurse -File | Where-Object {
-        $relative = $_.FullName.Substring($addonRoot.Length).TrimStart('\')
+        $relative = $_.FullName.Substring($addonRoot.Length).TrimStart('\', '/')
         $parts = $relative -split '[\\/]'
         -not ($excludedRootNames -contains $parts[0]) -and -not ($excludedFiles -contains $relative)
     } | ForEach-Object {
-        $relative = $_.FullName.Substring($addonRoot.Length).TrimStart('\')
+        $relative = $_.FullName.Substring($addonRoot.Length).TrimStart('\', '/')
         $entryName = ($addonName + "\\" + $relative).Replace("\\", "/")
         [System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile(
             $zip, $_.FullName, $entryName, [System.IO.Compression.CompressionLevel]::Optimal) | Out-Null

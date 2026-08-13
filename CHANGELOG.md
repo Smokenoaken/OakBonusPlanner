@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.5.0-beta.5
+
+- Fixed GitHub release packaging on Linux so tagged beta releases publish correctly to Wago.
+
 ## v0.5.0-beta.4
 
 - Added a Supporters panel with Oak community links.
