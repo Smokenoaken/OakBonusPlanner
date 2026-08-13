@@ -1,0 +1,8 @@
+package-as: OakBonusPlanner
+manual-changelog: CHANGELOG.md
+
+ignore:
+  - dist
+  - package-release.ps1
+  - RELEASING.md
+  - README.md

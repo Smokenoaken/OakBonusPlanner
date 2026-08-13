@@ -1,0 +1,43 @@
+name: Wago Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    env:
+      WAGO_API_TOKEN: ${{ secrets.WAGO_API_TOKEN }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect Wago project ID
+        id: wago
+        shell: bash
+        run: |
+          toc_file="OakBonusPlanner.toc"
+          wago_id="$(sed -n 's/^## X-Wago-ID:[[:space:]]*//p' "$toc_file" | head -n 1)"
+          if [[ -z "$wago_id" ]]; then
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Wago upload is not configured: add X-Wago-ID to $toc_file."
+            exit 0
+          fi
+
+          echo "found=true" >> "$GITHUB_OUTPUT"
+
+      - name: Package and publish to Wago
+        if: ${{ steps.wago.outputs.found == 'true' && env.WAGO_API_TOKEN != '' }}
+        uses: BigWigsMods/packager@v2
+        env:
+          WAGO_API_TOKEN: ${{ env.WAGO_API_TOKEN }}
+
+      - name: Missing Wago token
+        if: ${{ steps.wago.outputs.found == 'true' && env.WAGO_API_TOKEN == '' }}
+        run: echo "::warning::WAGO_API_TOKEN is not set, so this tag was not published to Wago."
