@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.5.0-beta.3
+
+- Republished the validated beta build after restoring Wago release integration.
+
 ## v0.5.0-beta.2
 
 - Validated Season 2 BIS and catalyst targets across every class and specialization.
