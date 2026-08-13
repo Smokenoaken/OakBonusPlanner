@@ -475,7 +475,7 @@ end)
 
 local footerLegend = CreateFrame("Frame", nil, panel)
 footerLegend:SetPoint("BOTTOMLEFT", panel, "BOTTOMLEFT", 18, 8)
-footerLegend:SetPoint("BOTTOMRIGHT", panel, "BOTTOMRIGHT", -112, 8)
+footerLegend:SetPoint("BOTTOMRIGHT", panel, "BOTTOMRIGHT", -202, 8)
 footerLegend:SetHeight(20)
 footerLegend:SetFrameLevel(panel:GetFrameLevel() + 5)
 
@@ -553,7 +553,7 @@ currencyWatcher:SetScript("OnEvent", function(_, _, currencyID)
 end)
 
 local footerControls = CreateFrame("Frame", nil, panel)
-footerControls:SetSize(102, 22)
+footerControls:SetSize(192, 22)
 footerControls:SetPoint("BOTTOMRIGHT", panel, "BOTTOMRIGHT", -26, 6)
 footerControls:SetFrameLevel(panel:GetFrameLevel() + 6)
 
@@ -584,7 +584,10 @@ local optionsButton = CreateCogButton(footerControls, 22)
 optionsButton:SetPoint("RIGHT", footerControls, "RIGHT", 0, 0)
 local rescanButton = CreateClassicButton(footerControls, "Reset + Rescan", 76, 22)
 rescanButton:SetPoint("RIGHT", optionsButton, "LEFT", -4, 0)
+local supportersButton = CreateClassicButton(footerControls, "Supporters", 82, 22)
+supportersButton:SetPoint("RIGHT", rescanButton, "LEFT", -4, 0)
 rescanButton:SetTooltip("Reset and rescan bonus-roll history", "Clears the locally recorded won items, then rebuilds them from Blizzard's Season 2 Voidcache tooltips for your current loot specialization.")
+supportersButton:SetTooltip("Supporters and links", "Thank the Oakensoul Patreon community, or open Oak community links.")
 optionsButton:SetScript("OnClick", function()
     HideMenus()
     if addonTable.ToggleOptions then addonTable.ToggleOptions() end
@@ -594,6 +597,10 @@ rescanButton:SetScript("OnClick", function()
     addonTable.ResetObtained()
     addonTable.Refresh()
     if addonTable.ScanBonusRollHistory then addonTable.ScanBonusRollHistory(true) end
+end)
+supportersButton:SetScript("OnClick", function()
+    HideMenus()
+    if addonTable.ToggleSupporters then addonTable.ToggleSupporters() end
 end)
 
 itemMenu = CreateMenu("OakBonusPlannerItemMenu", 184)
@@ -936,6 +943,7 @@ panel:SetScript("OnHide", function()
     if addonTable.CancelBonusRollHistoryScan then addonTable.CancelBonusRollHistoryScan() end
     HideMenus()
     if itemMenu then itemMenu:Hide() end
+    if addonTable.SupportersPanel then addonTable.SupportersPanel:Hide() end
 end)
 
 function addonTable.Toggle()

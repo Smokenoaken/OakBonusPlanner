@@ -24,7 +24,7 @@ $zipPath = Join-Path $distPath "$addonName-v$Version.zip"
 if (Test-Path -LiteralPath $zipPath) { Remove-Item -LiteralPath $zipPath -Force }
 
 $excludedRootNames = @(".git", "dist", "tools")
-$excludedFiles = @(".gitignore", "CHANGELOG.md", "README.md", "package-release.ps1")
+$excludedFiles = @(".gitignore", "CHANGELOG.md", "README.md", "package-release.ps1", "sync-patreon-supporters.ps1")
 $zip = [System.IO.Compression.ZipFile]::Open($zipPath, [System.IO.Compression.ZipArchiveMode]::Create)
 
 try {

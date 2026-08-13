@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.5.0-beta.4
+
+- Added a Supporters panel with Oak community links.
+- Refreshed the bundled list of active paid Patreon supporters.
+- Excluded the private Patreon sync helper from release packages.
+
 ## v0.5.0-beta.3
 
 - Republished the validated beta build after restoring Wago release integration.
