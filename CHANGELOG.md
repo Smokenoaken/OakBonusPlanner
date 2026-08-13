@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.5.0
+
+- Promoted Oak Bonus Planner from beta to its first stable release.
+- Added a clean crafted-BIS header with visible slot labels, missive guidance, and applicable embellishment recommendations.
+- Kept crafted recommendations readable without relying on third-party tooltip add-ons.
+- Preserved the tested persistent planner scale and footer-safe minimum window width.
+
 ## v0.5.0-beta.7
 
 - Fixed the planner scale setting so it persists after reloads, relogs, and client restarts.

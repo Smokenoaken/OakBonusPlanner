@@ -338,10 +338,10 @@ end
 local craftedGroup = CreateFrame("Frame", nil, panel)
 craftedGroup:SetPoint("TOPLEFT", tabs.overall, "TOPRIGHT", 8, -1)
 craftedGroup:SetPoint("TOPRIGHT", panel, "TOPRIGHT", -18, -78)
-craftedGroup:SetHeight(32)
+craftedGroup:SetHeight(56)
 craftedGroup:SetFrameLevel(20)
 local craftedNote = craftedGroup:CreateFontString(nil, "OVERLAY")
-craftedNote:SetPoint("LEFT", 0, 0)
+craftedNote:SetPoint("TOPLEFT", 0, -14)
 craftedNote:SetWidth(54)
 craftedNote:SetJustifyH("LEFT")
 craftedNote:SetJustifyV("MIDDLE")
@@ -350,6 +350,22 @@ craftedNote:SetTextColor(unpack(CLASSIC_MUTED))
 craftedNote:SetText("Crafted:")
 local craftedButtons = {}
 local activeCraftedButton
+
+-- Keep the crafted recommendation visible in OBP itself. Tooltip addons are
+-- free to rebuild GameTooltip, so this line is never tooltip-dependent.
+local craftedDetailsNote = craftedGroup:CreateFontString(nil, "OVERLAY")
+craftedDetailsNote:SetPoint("TOPLEFT", craftedGroup, "BOTTOMLEFT", 0, -3)
+craftedDetailsNote:SetPoint("TOPRIGHT", craftedGroup, "BOTTOMRIGHT", 0, -3)
+craftedDetailsNote:SetJustifyH("LEFT")
+craftedDetailsNote:SetWordWrap(false)
+addonTable.ApplyFont(craftedDetailsNote, "small")
+craftedDetailsNote:SetTextColor(unpack(CLASSIC_GOLD))
+
+-- The source note remains on the left; the crafted detail line occupies the
+-- space directly under the crafted icons on the right.
+summary:ClearAllPoints()
+summary:SetPoint("TOPLEFT", panel, "TOPLEFT", 18, -110)
+summary:SetPoint("TOPRIGHT", craftedGroup, "TOPLEFT", -8, -6)
 
 local function AddCraftedTooltipLines(button, tooltip)
     tooltip = tooltip or GameTooltip
@@ -395,7 +411,7 @@ local function CreateCraftedButton(index)
     button:EnableMouse(true)
     button:SetFrameLevel(craftedGroup:GetFrameLevel() + 1)
     button:SetSize(30, 30)
-    button:SetPoint("LEFT", craftedNote, "RIGHT", 4 + ((index - 1) * 34), 0)
+    button:SetPoint("TOPLEFT", craftedNote, "TOPRIGHT", 6 + ((index - 1) * 52), -8)
     button:SetBackdrop({
         bgFile = "Interface\\Buttons\\WHITE8X8",
         edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
@@ -414,6 +430,12 @@ local function CreateCraftedButton(index)
     button.itemLevel:SetJustifyH("RIGHT")
     addonTable.ApplyFont(button.itemLevel, "small")
     button.itemLevel:SetTextColor(unpack(CLASSIC_GOLD))
+    button.slotLabel = button:CreateFontString(nil, "OVERLAY")
+    button.slotLabel:SetPoint("BOTTOM", button, "TOP", 0, 1)
+    button.slotLabel:SetWidth(50)
+    button.slotLabel:SetJustifyH("CENTER")
+    addonTable.ApplyFont(button.slotLabel, "small")
+    button.slotLabel:SetTextColor(unpack(CLASSIC_TEXT))
     button:SetScript("OnEnter", function(self)
         if not self.itemData then return end
         activeCraftedButton = self
@@ -452,14 +474,14 @@ end
 for index = 1, 2 do CreateCraftedButton(index) end
 
 local statNote = panel:CreateFontString(nil, "OVERLAY")
-statNote:SetPoint("TOPLEFT", panel, "TOPLEFT", 18, -125)
-statNote:SetPoint("TOPRIGHT", panel, "TOPRIGHT", -18, -125)
+statNote:SetPoint("TOPLEFT", panel, "TOPLEFT", 18, -155)
+statNote:SetPoint("TOPRIGHT", panel, "TOPRIGHT", -18, -155)
 statNote:SetJustifyH("LEFT")
 addonTable.ApplyFont(statNote, "small")
 statNote:SetTextColor(unpack(CLASSIC_MUTED))
 
 local scroll = CreateFrame("ScrollFrame", "OakBonusPlannerScrollFrame", panel, "UIPanelScrollFrameTemplate")
-scroll:SetPoint("TOPLEFT", panel, "TOPLEFT", 16, -146)
+scroll:SetPoint("TOPLEFT", panel, "TOPLEFT", 16, -177)
 scroll:SetPoint("BOTTOMRIGHT", panel, "BOTTOMRIGHT", -31, 38)
 local content = CreateFrame("Frame", nil, scroll)
 content:SetWidth(math.max(1, panel:GetWidth() - 47))
@@ -871,18 +893,40 @@ end
 
 local sortShortLabels = { chance = "BIS", name = "Name", pool = "Drops" }
 
-local function SetGuideNotes(plan)
-    local crafted = {}
-    for _, item in ipairs(plan and plan.crafted or {}) do
-        if #crafted < 2 then
-            crafted[#crafted + 1] = (item.slot or "Slot") .. ": " .. (item.name or "Crafted item")
+local primaryStats = {
+    Intellect = true,
+    Agility = true,
+    Strength = true,
+    ["Item Level"] = true,
+}
+
+local function GetCraftedMissive(stats)
+    local choices = {}
+    for stat in string.gmatch(stats or "", "[^>]+") do
+        stat = stat:gsub("%b()", ""):gsub("%d+%%?", ""):gsub("^%s+", ""):gsub("%s+$", "")
+        if stat ~= "" and not primaryStats[stat] then
+            choices[#choices + 1] = stat
+            if #choices == 2 then break end
         end
     end
+    return #choices > 0 and table.concat(choices, " + ") or nil
+end
+
+local function IsCraftedWeapon(item)
+    local slot = item and item.slot or ""
+    return slot == "Main Hand" or slot == "Off Hand" or slot == "One-Hand" or slot == "Two-Hand"
+end
+
+local function SetGuideNotes(plan)
     craftedNote:SetText("Crafted:")
+    local hasCraftedItem = false
+    local hasCraftedWeapon = false
     for index = 1, 2 do
         local item = plan and plan.crafted and plan.crafted[index]
         local button = craftedButtons[index]
         if item then
+            hasCraftedItem = true
+            hasCraftedWeapon = hasCraftedWeapon or IsCraftedWeapon(item)
             button.itemData = item
             item.maxItemLevel = addonTable.GetMaxItemLevel(nil, true, item.slot)
             item.craftedBonusIDs = item.bonusIDs or (plan and plan.craftedBonusIDs)
@@ -893,12 +937,30 @@ local function SetGuideNotes(plan)
             button.icon:SetTexture((item.itemID and C_Item and C_Item.GetItemIconByID and C_Item.GetItemIconByID(item.itemID))
                 or "Interface\\Icons\\INV_Misc_QuestionMark")
             button.itemLevel:SetText(item.maxItemLevel and tostring(item.maxItemLevel) or "")
+            button.slotLabel:SetText(item.slot or "Crafted")
             button:Show()
         else
             button.itemData = nil
             button.itemLevel:SetText("")
+            button.slotLabel:SetText("")
             button:Hide()
         end
+    end
+    if hasCraftedItem then
+        local details = {}
+        local missive = GetCraftedMissive(plan and plan.statPriority)
+        if missive then details[#details + 1] = "Missive: " .. missive end
+        local embellishment = plan and plan.craftedEmbellishment
+        if embellishment and embellishment ~= "" then
+            if not hasCraftedWeapon then
+                embellishment = embellishment:gsub("Darkmoon Sigil:[^+]+%s*%+?%s*", "")
+                    :gsub("^%s*%+%s*", ""):gsub("%s+$", "")
+            end
+            if embellishment ~= "" then details[#details + 1] = "Embellishment: " .. embellishment end
+        end
+        craftedDetailsNote:SetText(#details > 0 and table.concat(details, "  •  ") or "")
+    else
+        craftedDetailsNote:SetText("")
     end
     statNote:SetText(plan and plan.statPriority and plan.statPriority ~= ""
         and "Recommended stats: " .. plan.statPriority
@@ -920,9 +982,9 @@ function addonTable.Refresh()
         if tab.text then tab.text:SetTextColor(unpack(id == activeTab and CLASSIC_GOLD or CLASSIC_TEXT)) end
     end
     if plan then
-        summary:SetText("Recommended loot spec is shown for each dungeon or boss. Hover a row for its loot-spec details.")
+        summary:SetText("Each source shows its best loot spec.\nHover a row to see why that loot spec is recommended.")
     else
-        summary:SetText("No curated BIS map is installed. Right-click any eligible item to build your own BIS list.")
+        summary:SetText("No curated BIS map is installed.\nRight-click an eligible item to build your own BIS list.")
     end
     SetGuideNotes(plan)
 
