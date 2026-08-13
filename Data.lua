@@ -127,6 +127,7 @@ addonTable.Data.BonusRollExcludedItems = {
     [270909] = true, -- Slumbering Coil Curio (Ula'tek)
     [275937] = true, -- Hex Lord's Visage: cosmetic transmog appearance, not a Voidcore reward.
     [275938] = true, -- Alternate Hex Lord's Visage appearance, also cosmetic only.
+    [281227] = true, -- Soulcoiler's Rush'kah: cosmetic appearance, not a Voidcore reward.
 }
 
 -- Current Season 2 Nebulous Voidcore currency. The planner reads it only

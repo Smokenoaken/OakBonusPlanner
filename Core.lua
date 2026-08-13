@@ -856,7 +856,14 @@ local function BuildCatalystSet(pool, plan, source)
     local config = plan and plan.catalyst
     if not config then return catalyst end
     for _, target in ipairs(config.targets or {}) do
-        if pool[target.itemID] and SourceTextMatches(target.source, source) then
+        if target.tierToken and SourceTextMatches(target.source, source) then
+            local targetSlotID = GetGuideSlotID(target)
+            for _, token in ipairs(GetTierTokenDefinitions(source) or {}) do
+                if targetSlotID and token.slotID == targetSlotID and pool[token.itemID] then
+                    catalyst[token.itemID] = true
+                end
+            end
+        elseif pool[target.itemID] and SourceTextMatches(target.source, source) then
             catalyst[target.itemID] = true
         end
     end

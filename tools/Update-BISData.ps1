@@ -144,32 +144,38 @@ function Get-IcyItems([string] $section) {
     return $items
 }
 
-function Get-CardCatalystTargets([object[]] $items, [hashtable] $sourcesByItemID) {
+function Get-CardCatalystTargets([object[]] $items, [object] $catalog, [int] $specID) {
     $targets = @()
     foreach ($item in $items) {
-        if (-not $item.isCatalyst -or -not $item.originalItemID) { continue }
+        if (-not $item.isCatalyst) { continue }
         # The transformed tier card's footer can name another eligible
         # catalyst candidate. The only unambiguous identifier is
         # original-item: resolve that base item through the bundled Season 2
         # pool, then use the footer only if it is not present in the database.
-        $sources = @($sourcesByItemID[[int]$item.originalItemID])
-        if ($sources.Count -eq 0) {
-            $sourceMatch = [regex]::Match($item.source, '(?i)catalyst\s+(?:or|from)\s+(.+?)(?:\s+in\s+venomous abyss)?$')
-            if ($sourceMatch.Success) {
-                $sources = @($sourceMatch.Groups[1].Value.Trim())
+        if ($item.originalItemID -and $catalog.byItemID.ContainsKey([int]$item.originalItemID)) {
+            foreach ($source in @($catalog.byItemID[[int]$item.originalItemID])) {
+                if ($catalog.itemSpecs[[int]$item.originalItemID] -contains $specID) {
+                    $targets += [pscustomobject]@{
+                        itemID = [int]$item.originalItemID
+                        slot = $item.slot
+                        name = $item.name
+                        source = $source
+                    }
+                }
             }
+            continue
         }
-        foreach ($source in $sources) {
-            if (-not $source) { continue }
-            $targets += [pscustomobject]@{
-                itemID = [int] $item.originalItemID
-                slot = $item.slot
-                name = $item.name
-                source = $source
-            }
-        }
+
+        # Never infer an item from a source and a stale imported slot label.
+        # A guide card without its base original-item is informational only.
     }
     return @($targets | Sort-Object itemID, source -Unique)
+}
+
+function Get-IcyBisPanel([string] $html, [int] $index) {
+    $match = [regex]::Match($html, '<div class="image_block_content"\s+id="bis_0_' + $index + '">(?<content>.*?)(?=<div class="image_block_content"|$)', 'Singleline')
+    if ($match.Success) { return $match.Groups['content'].Value }
+    return ""
 }
 
 function Get-IcyCatalystTargets([string] $html) {
@@ -207,8 +213,23 @@ function Get-GuideCatalystSlotID([string] $slot) {
     return $null
 }
 
+function Find-IcyItemIDByName([string] $html, [string] $name) {
+    if (-not $html -or -not $name) { return $null }
+    $escapedName = [regex]::Escape($name.Trim())
+    $pattern = 'data-wowhead="item=(?<id>\d+)[^"]*"[^>]*class="q\d+">\s*' + $escapedName + '\s*</span>'
+    $match = [regex]::Match($html, $pattern, 'IgnoreCase')
+    if ($match.Success) { return [int]$match.Groups['id'].Value }
+    return $null
+}
+
 function Get-CatalogSourceKey([string] $source) {
-    return (($source -replace '(?i)^the\s+', '').Trim().ToLowerInvariant())
+    $key = (($source -replace '(?i)^the\s+', '').Trim().ToLowerInvariant())
+    $aliases = @{
+        'nymrissa wavecaller' = 'nymrissa tidecaller'
+        'nymrissa' = 'nymrissa tidecaller'
+    }
+    if ($aliases.ContainsKey($key)) { return $aliases[$key] }
+    return $key
 }
 
 function SourceNamesMatch([string] $left, [string] $right) {
@@ -218,12 +239,34 @@ function SourceNamesMatch([string] $left, [string] $right) {
     return $leftKey -eq $rightKey -or $leftKey.Contains($rightKey) -or $rightKey.Contains($leftKey)
 }
 
+function ResolveCatalogSource([string] $sourceText, [object] $catalog) {
+    $sourceText = ($sourceText -replace '\s*\.$', '').Trim()
+    foreach ($candidate in @($catalog.sourceNames)) {
+        if (SourceNamesMatch $sourceText $candidate) { return $candidate }
+    }
+    if ($sourceText -match '^(?<source>.+?)\s+in\s+(?:Venomous Abyss|Tidebound Grotto)\b') {
+        $sourceText = $Matches['source'].Trim()
+        foreach ($candidate in @($catalog.sourceNames)) {
+            if (SourceNamesMatch $sourceText $candidate) { return $candidate }
+        }
+    }
+    return $sourceText
+}
+
+function IsRaidCatalogSource([string] $source) {
+    foreach ($raidSource in $raidSourceNames) {
+        if (SourceNamesMatch $source $raidSource) { return $true }
+    }
+    return $false
+}
+
 function Get-SeasonLootCatalog {
     $itemFile = Join-Path $root "Data\LootItems.lua"
     $dungeonFile = Join-Path $root "Data\LootDungeons.lua"
     $raidFile = Join-Path $root "Data\LootRaids.lua"
     $itemNames = @{}
     $itemSlots = @{}
+    $itemSpecs = @{}
     $sources = @{}
 
     foreach ($match in [regex]::Matches((Get-Content -LiteralPath $itemFile -Raw), '\[(\d+)\]\s*=\s*\{\s*name\s*=\s*"([^"]*)"')) {
@@ -234,9 +277,28 @@ function Get-SeasonLootCatalog {
     foreach ($match in [regex]::Matches((Get-Content -LiteralPath $itemFile -Raw), '\[(\d+)\]\s*=\s*\{.*?slotId\s*=\s*(\d+)', 'Singleline')) {
         $itemSlots[[int]$match.Groups[1].Value] = [int]$match.Groups[2].Value
     }
+    foreach ($match in [regex]::Matches((Get-Content -LiteralPath $itemFile -Raw), '\[(\d+)\]\s*=\s*\{\s*classes\s*=\s*\{(?<classes>.*?)\},\s*(?:stats\s*=\s*\{[^}]*\},\s*)?slotId\s*=\s*\d+', 'Singleline')) {
+        $specIDs = @()
+        foreach ($classMatch in [regex]::Matches($match.Groups['classes'].Value, '\[\d+\]\s*=\s*\{([^}]*)\}')) {
+            foreach ($specID in [regex]::Matches($classMatch.Groups[1].Value, '\d+')) {
+                $specIDs += [int]$specID.Value
+            }
+        }
+        $itemSpecs[[int]$match.Groups[1].Value] = @($specIDs | Sort-Object -Unique)
+    }
     $sourceDefinitions = @{}
     $dataFile = Join-Path $root "Data.lua"
     $dataContent = Get-Content -LiteralPath $dataFile -Raw
+    $excludedItemIDs = @{}
+    $excludedBlock = [regex]::Match($dataContent, '(?is)BonusRollExcludedItems\s*=\s*\{(?<items>.*?)\}')
+    foreach ($idMatch in [regex]::Matches($excludedBlock.Groups['items'].Value, '\[(\d+)\]\s*=\s*true')) {
+        $excludedItemIDs[[int]$idMatch.Groups[1].Value] = $true
+    }
+    $tierTokenIDs = @{}
+    $tierBlock = [regex]::Match($dataContent, '(?is)RaidTierTokens\s*=\s*\{(?<items>.*?)\n\}')
+    foreach ($idMatch in [regex]::Matches($tierBlock.Groups['items'].Value, 'itemID\s*=\s*(\d+)')) {
+        $tierTokenIDs[[int]$idMatch.Groups[1].Value] = $true
+    }
     foreach ($match in [regex]::Matches($dataContent, '\{\s*id\s*=\s*"[^"]+",\s*name\s*=\s*"([^"]+)".*?(?:challengeModeID|bossID)\s*=\s*(\d+)', 'Singleline')) {
         $sourceDefinitions[[int]$match.Groups[2].Value] = $match.Groups[1].Value
     }
@@ -247,6 +309,7 @@ function Get-SeasonLootCatalog {
         if (-not $source) { continue }
         foreach ($idMatch in [regex]::Matches($match.Groups[2].Value, '\d+')) {
             $itemID = [int]$idMatch.Value
+            if ($excludedItemIDs.ContainsKey($itemID)) { continue }
             if (-not $sources.ContainsKey($itemID)) { $sources[$itemID] = @() }
             $sources[$itemID] += $source
         }
@@ -260,6 +323,7 @@ function Get-SeasonLootCatalog {
         foreach ($idMatch in [regex]::Matches($bossMatch.Groups['loot'].Value, '\d+')) {
             $itemID = [int]$idMatch.Value
             if ($itemID -in @(14, 15, 16, 17)) { continue }
+            if ($excludedItemIDs.ContainsKey($itemID)) { continue }
             if (-not $sources.ContainsKey($itemID)) { $sources[$itemID] = @() }
             $sources[$itemID] += $source
         }
@@ -284,15 +348,20 @@ function Get-SeasonLootCatalog {
             }
         }
     }
+    $sourceNames = @($sourceDefinitions.Values | Sort-Object -Unique)
     return [pscustomobject]@{
         byName = $catalog
         byItemID = $sources
         itemSlots = $itemSlots
+        itemSpecs = $itemSpecs
+        excludedItemIDs = $excludedItemIDs
+        tierTokenIDs = $tierTokenIDs
         bySourceSlot = $sourceSlotCatalog
+        sourceNames = $sourceNames
     }
 }
 
-function Assert-CatalystTargets([object[]] $targets, [object] $catalog, [string] $label) {
+function Assert-CatalystTargets([object[]] $targets, [object] $catalog, [int] $specID, [string] $label) {
     foreach ($target in $targets) {
         if (-not $target.itemID -or -not $target.source) {
             throw "Invalid catalyst target in $label"
@@ -303,6 +372,10 @@ function Assert-CatalystTargets([object[]] $targets, [object] $catalog, [string]
         }
         if (-not $catalog.itemSlots.ContainsKey([int]$target.itemID)) {
             throw "Catalyst item $($target.itemID) is absent from the Season 2 item database in $label"
+        }
+        if ($target.tierToken) { continue }
+        if ($catalog.itemSpecs[[int]$target.itemID] -notcontains $specID) {
+            throw "Catalyst item $($target.itemID) is not eligible for spec $specID in $label"
         }
         $sourceMatch = $false
         foreach ($source in @($catalog.byItemID[[int]$target.itemID])) {
@@ -317,7 +390,7 @@ function Assert-CatalystTargets([object[]] $targets, [object] $catalog, [string]
     }
 }
 
-function Get-GuideFAQCatalystTargets([string] $html, [object] $catalog) {
+function Get-GuideFAQCatalystTargets([string] $html, [object] $catalog, [int] $specID) {
     # Some current Icy Veins guides present catalyst choices only in the
     # "Which Slots Do I Want Tier Set In?" FAQ.  The page gives an item name
     # and source rather than an item link, so resolve that pair against our
@@ -341,16 +414,33 @@ function Get-GuideFAQCatalystTargets([string] $html, [object] $catalog) {
             $sourceText = Strip-Html $choice.Groups['source'].Value
             $matched = $false
             foreach ($candidate in @($catalog.byName[$name.ToLowerInvariant()])) {
+                if ($catalog.itemSpecs[[int]$candidate.itemID] -notcontains $specID) { continue }
                 if ($sourceText.IndexOf($candidate.source, [System.StringComparison]::OrdinalIgnoreCase) -lt 0) { continue }
                 $targets += [pscustomobject]@{ itemID = $candidate.itemID; slot = $slot; name = $candidate.name; source = $candidate.source }
                 $matched = $true
             }
             if (-not $matched) {
-                $slotID = Get-GuideCatalystSlotID $slot
                 $sourceKey = Get-CatalogSourceKey (($sourceText -replace '(?i)\s+if\b.*$', '').Trim())
-                foreach ($candidate in @($catalog.bySourceSlot["$sourceKey|$slotID"])) {
-                    $targets += [pscustomobject]@{ itemID = $candidate.itemID; slot = $slot; name = $name; source = $candidate.source }
+                $namedCandidates = @(
+                    $catalog.byName[$name.ToLowerInvariant()] |
+                    Where-Object {
+                        $_ -and $catalog.itemSpecs[[int]$_.itemID] -contains $specID -and
+                        (SourceNamesMatch $_.source $sourceText)
+                    } |
+                    Sort-Object itemID -Unique
+                )
+                foreach ($candidate in $namedCandidates) {
+                    $targets += [pscustomobject]@{ itemID = $candidate.itemID; slot = $slot; name = $candidate.name; source = $candidate.source }
                     $matched = $true
+                }
+                $linkedID = Find-IcyItemIDByName $html $name
+                if (-not $matched -and $linkedID -and $catalog.itemSpecs[$linkedID] -contains $specID) {
+                    foreach ($candidateSource in @($catalog.byItemID[$linkedID])) {
+                        if (SourceNamesMatch $candidateSource $sourceText) {
+                            $targets += [pscustomobject]@{ itemID = $linkedID; slot = $slot; name = $name; source = $candidateSource }
+                            $matched = $true
+                        }
+                    }
                 }
             }
             if (-not $matched) { $unresolved += "${slot}: $name ($sourceText)" }
@@ -361,19 +451,167 @@ function Get-GuideFAQCatalystTargets([string] $html, [object] $catalog) {
             if ($sourceText -match '(?i)^if\b') { continue }
             $matched = $false
             foreach ($candidate in @($catalog.byName[$name.ToLowerInvariant()])) {
+                if ($catalog.itemSpecs[[int]$candidate.itemID] -notcontains $specID) { continue }
                 if ($sourceText.IndexOf($candidate.source, [System.StringComparison]::OrdinalIgnoreCase) -lt 0) { continue }
                 $targets += [pscustomobject]@{ itemID = $candidate.itemID; slot = $slot; name = $candidate.name; source = $candidate.source }
                 $matched = $true
             }
             if (-not $matched) {
-                $slotID = Get-GuideCatalystSlotID $slot
                 $sourceKey = Get-CatalogSourceKey (($sourceText -replace '(?i)\s+if\b.*$', '').Trim())
-                foreach ($candidate in @($catalog.bySourceSlot["$sourceKey|$slotID"])) {
-                    $targets += [pscustomobject]@{ itemID = $candidate.itemID; slot = $slot; name = $name; source = $candidate.source }
+                $namedCandidates = @(
+                    $catalog.byName[$name.ToLowerInvariant()] |
+                    Where-Object {
+                        $_ -and $catalog.itemSpecs[[int]$_.itemID] -contains $specID -and
+                        (SourceNamesMatch $_.source $sourceText)
+                    } |
+                    Sort-Object itemID -Unique
+                )
+                foreach ($candidate in $namedCandidates) {
+                    $targets += [pscustomobject]@{ itemID = $candidate.itemID; slot = $slot; name = $candidate.name; source = $candidate.source }
                     $matched = $true
+                }
+                $linkedID = Find-IcyItemIDByName $html $name
+                if (-not $matched -and $linkedID -and $catalog.itemSpecs[$linkedID] -contains $specID) {
+                    foreach ($candidateSource in @($catalog.byItemID[$linkedID])) {
+                        if (SourceNamesMatch $candidateSource $sourceText) {
+                            $targets += [pscustomobject]@{ itemID = $linkedID; slot = $slot; name = $name; source = $candidateSource }
+                            $matched = $true
+                        }
+                    }
                 }
             }
             if (-not $matched) { $unresolved += "${slot}: $name ($sourceText)" }
+        }
+    }
+    return [pscustomobject]@{
+        targets = @($targets | Sort-Object itemID, source -Unique)
+        unresolved = @($unresolved | Sort-Object -Unique)
+    }
+}
+
+function Get-PanelCatalystTargets([string] $panel, [object] $catalog, [int] $specID) {
+    $targets = @()
+    $unresolved = @()
+    if (-not $panel) { return [pscustomobject]@{ targets = $targets; unresolved = $unresolved } }
+
+    $answerPattern = '(?is)<details\b[^>]*>.*?<span class="faq-block__question">\s*Which\s+(?:Tier\s+Set\s+Pieces|Slots)\s+Do\s+I\s+Want(?:\s+Tier\s+Set\s+In|\s+(?:For|From)\s+[^?]+)?\?\s*</span>.*?<div class="faq-block__answer">(?<answer>.*?)</div>\s*</div>\s*</details>'
+    foreach ($answerMatch in [regex]::Matches($panel, $answerPattern)) {
+        $answer = $answerMatch.Groups['answer'].Value
+        foreach ($lineMatch in [regex]::Matches($answerMatch.Groups['answer'].Value, '(?is)<li\b[^>]*>\s*<strong>\s*(?<slot>Helm|Head|Shoulders|Chest|Gloves|Hands|Legs)\s*</strong>\s*-\s*(?<body>.*?)</li>')) {
+            $slot = Strip-Html $lineMatch.Groups['slot'].Value
+            $body = $lineMatch.Groups['body'].Value
+            $text = Strip-Html $body
+            $sourceMatch = [regex]::Match($text, '\bfrom\s+(?<source>.+)$', 'IgnoreCase')
+            if (-not $sourceMatch.Success) {
+                $unresolved += "${slot}: $text"
+                continue
+            }
+            $source = ResolveCatalogSource $sourceMatch.Groups['source'].Value $catalog
+            $itemMatch = [regex]::Match($body, 'data-wowhead="item=(\d+)')
+            if ($itemMatch.Success) {
+                $nameMatch = [regex]::Match($body, 'class="q\d+">\s*([^<]+?)\s*</span>')
+                if (-not $nameMatch.Success) { $nameMatch = [regex]::Match($body, 'alt="([^"]+) Icon"') }
+                $targets += [pscustomobject]@{
+                    itemID = [int]$itemMatch.Groups[1].Value
+                    slot = $slot
+                    name = Strip-Html $nameMatch.Groups[1].Value
+                    source = $source
+                }
+                continue
+            }
+            if ($text -match '(?i)tier\s+token') {
+                # Tier tokens are handled by the runtime's class-aware token
+                # map. A representative token merely anchors the source here;
+                # it must never be treated as a direct catalyst item.
+                $tokenItemID = switch (Get-CatalogSourceKey $source) {
+                    'entombed sentinels' { 270910 }
+                    'lost explorers' { 270922 }
+                    'vashnik the malignant' { 270926 }
+                    'sszorak' { 270918 }
+                    'twin fangs' { 270914 }
+                }
+                if ($tokenItemID) {
+                    $targets += [pscustomobject]@{
+                        itemID = $tokenItemID
+                        slot = $slot
+                        name = 'Tier token'
+                        source = $source
+                        tierToken = $true
+                    }
+                    continue
+                }
+            }
+            $unresolved += "${slot}: $text"
+        }
+
+        # Some guides use <strong>Helm:</strong> item cards without repeating
+        # the source. Their item IDs are sufficient only when the bundled
+        # Season 2 catalog can supply a single eligible source for this spec.
+        foreach ($cardMatch in [regex]::Matches($answer, '(?is)<li\b[^>]*>\s*<strong>\s*(?<slot>Helm|Head|Shoulders?|Chest|Gloves|Hands|Legs)\s*:\s*</strong>\s*(?<body>.*?)</li>')) {
+            $slot = Strip-Html $cardMatch.Groups['slot'].Value
+            $body = $cardMatch.Groups['body'].Value
+            if ((Strip-Html $body) -match '(?i)no\s+good\s+choices|do\s+not\s+cataly[sz]e|offpiece') { continue }
+            $itemMatch = [regex]::Match($body, 'data-wowhead="item=(\d+)')
+            if (-not $itemMatch.Success) { continue }
+            $itemID = [int]$itemMatch.Groups[1].Value
+            if (-not ($catalog.itemSpecs[$itemID] -contains $specID)) { continue }
+            $sources = @($catalog.byItemID[$itemID] | Sort-Object -Unique)
+            if ($sources.Count -ne 1) { continue }
+            $nameMatch = [regex]::Match($body, 'class="q\d+">\s*([^<]+?)\s*</span>')
+            $targets += [pscustomobject]@{
+                itemID = $itemID
+                slot = $slot
+                name = Strip-Html $nameMatch.Groups[1].Value
+                source = $sources[0]
+            }
+        }
+
+        # A number of healer and tank guides express the same recommendation
+        # as a Slot / Item / Source table instead of a list.
+        foreach ($rowMatch in [regex]::Matches($answer, '(?is)<tr\b[^>]*>\s*<td[^>]*>\s*(?<slot>Helm|Head|Shoulders?|Chest|Gloves|Hands|Legs)\s*</td>\s*<td[^>]*>(?<item>.*?)</td>\s*<td[^>]*>(?<source>.*?)</td>\s*</tr>')) {
+            $slot = Strip-Html $rowMatch.Groups['slot'].Value
+            $itemBody = $rowMatch.Groups['item'].Value
+            if ((Strip-Html $itemBody) -match '(?i)tier\s+token|don''t\s+catalyst') { continue }
+            $itemMatch = [regex]::Match($itemBody, 'data-wowhead="item=(\d+)')
+            if (-not $itemMatch.Success) { continue }
+            $itemID = [int]$itemMatch.Groups[1].Value
+            if (-not ($catalog.itemSpecs[$itemID] -contains $specID)) { continue }
+            $source = ResolveCatalogSource (Strip-Html $rowMatch.Groups['source'].Value) $catalog
+            $nameMatch = [regex]::Match($itemBody, 'class="q\d+">\s*([^<]+?)\s*</span>')
+            $targets += [pscustomobject]@{
+                itemID = $itemID
+                slot = $slot
+                name = Strip-Html $nameMatch.Groups[1].Value
+                source = $source
+            }
+        }
+
+        # Other Icy Veins authors use prose rather than list markup, for
+        # example "Helm: Gaze of the Coiled Watcher from Ula'tek". Resolve
+        # those recommendations by source, tier slot, and current spec so the
+        # generated record is still a real Voidcore-eligible item.
+        $plainAnswer = Strip-Html $answer
+        $prosePattern = '(?is)(?<slot>Helm|Head|Shoulders?|Chest|Gloves|Hands|Legs)\s*(?:—|-|:)\s*(?<body>.*?)(?=\s+(?:Helm|Head|Shoulders?|Chest|Gloves|Hands|Legs)\s*(?:—|-|:)|$)'
+        foreach ($proseMatch in [regex]::Matches($plainAnswer, $prosePattern)) {
+            $slot = $proseMatch.Groups['slot'].Value
+            $body = $proseMatch.Groups['body'].Value
+            $sourceMatch = [regex]::Match($body, '(?:\bfrom\s+|\()(?<source>[^.;()]+)\)?', 'IgnoreCase')
+            if (-not $sourceMatch.Success) { continue }
+            $source = ResolveCatalogSource $sourceMatch.Groups['source'].Value.Trim() $catalog
+            $slotID = Get-GuideCatalystSlotID $slot
+            foreach ($candidate in @(
+                $catalog.bySourceSlot["$(Get-CatalogSourceKey $source)|$slotID"] |
+                Where-Object { $_ -and $catalog.itemSpecs[[int]$_.itemID] -contains $specID } |
+                Sort-Object itemID -Unique
+            )) {
+                if (-not $candidate) { continue }
+                $targets += [pscustomobject]@{
+                    itemID = [int]$candidate.itemID
+                    slot = $slot
+                    name = $candidate.name
+                    source = $candidate.source
+                }
+            }
         }
     }
     return [pscustomobject]@{
@@ -424,6 +662,78 @@ function Get-WowheadOverall([string] $html) {
     return $ids
 }
 
+function Get-WowheadCatalystRequirements([string] $html, [object] $catalog) {
+    $requirements = @()
+    $unresolved = @()
+    $heading = [regex]::Match($html, '(?is)<h3[^>]*>\s*Best\s+Gear\s+to\s+Catalyze\s+for\s+.*?</h3>')
+    if (-not $heading.Success) {
+        return [pscustomobject]@{ requirements = $requirements; unresolved = $unresolved }
+    }
+    $tail = $html.Substring($heading.Index + $heading.Length)
+    $end = [regex]::Match($tail, '(?is)<h[23][^>]*>')
+    $section = if ($end.Success) { $tail.Substring(0, $end.Index) } else { $tail }
+    # Wowhead lists all five tier slots first, then gives an instruction for
+    # each slot. Only entries explicitly beginning with "Catalyze" are
+    # catalyst targets. The other instructions (for example "Use the natural
+    # drop") identify tier tokens, not bonus-roll catalyst candidates.
+    $plain = [System.Net.WebUtility]::HtmlDecode(($section -replace '<br\s*/?>', "`n" -replace '<[^>]+>', ' '))
+    $lines = @($plain -split "`r?`n" | ForEach-Object { $_.Trim() } | Where-Object { $_ })
+    $pairs = @()
+    for ($index = 0; $index -lt ($lines.Count - 1); $index++) {
+        if ($lines[$index] -notmatch '^(Head|Helm|Shoulder|Shoulders|Chest|Gloves|Hands|Legs)$') { continue }
+        $pairs += [pscustomobject]@{
+            slot = $lines[$index]
+            source = ResolveCatalogSource $lines[$index + 1] $catalog
+        }
+        $index++
+    }
+    $instructions = @($lines | Where-Object { $_ -match '(?i)^Cataly[sz]e\b|^Use\s+(?:the\s+)?(?:natural|regular)' })
+    for ($index = 0; $index -lt $pairs.Count; $index++) {
+        if ($instructions[$index] -match '(?i)^Cataly[sz]e\b') {
+            $requirements += $pairs[$index]
+        }
+    }
+    return [pscustomobject]@{
+        requirements = @($requirements | Sort-Object slot, source -Unique)
+        unresolved = @($unresolved | Sort-Object -Unique)
+    }
+}
+
+function Get-WowheadCatalystTargets([object[]] $requirements, [object] $catalog, [int] $specID) {
+    $targets = @()
+    $unresolved = @()
+    foreach ($requirement in $requirements) {
+        $sourceText = $requirement.source
+        # Guides sometimes recommend an auction-house/raid-trash piece. It is
+        # not a source-specific Voidcore reward and must not enter this pool.
+        if ($sourceText -match '(?i)\b(?:boe|trash|world|craft)\b') { continue }
+        $slotID = Get-GuideCatalystSlotID $requirement.slot
+        $sourceKey = Get-CatalogSourceKey $sourceText
+        $candidates = @(
+            $catalog.bySourceSlot["$sourceKey|$slotID"] |
+            Where-Object { $_ -and $catalog.itemSpecs[[int]$_.itemID] -contains $specID } |
+            Sort-Object itemID -Unique
+        )
+        if ($candidates.Count -eq 1) {
+            $candidate = $candidates[0]
+            $targets += [pscustomobject]@{
+                itemID = [int]$candidate.itemID
+                slot = $requirement.slot
+                name = $candidate.name
+                source = $candidate.source
+            }
+        } elseif ($candidates.Count -eq 0) {
+            $unresolved += "$($requirement.slot) from $sourceText"
+        } else {
+            $unresolved += "Ambiguous $($requirement.slot) from $sourceText"
+        }
+    }
+    return [pscustomobject]@{
+        targets = @($targets | Sort-Object itemID, source -Unique)
+        unresolved = @($unresolved | Sort-Object -Unique)
+    }
+}
+
 $records = @()
 $failed = @()
 $lootCatalog = Get-SeasonLootCatalog
@@ -437,26 +747,53 @@ foreach ($spec in $specs) {
         $gear = Get-Page $icyGearURL
         $stat = Get-Page $icyStatURL
         $wowhead = Get-Page $wowheadURL
-        $overall = @(Get-IcyItems (Get-Section $gear @("overall-best-in-slot", "best-overall-best-in-slot", "overall-bis-list")))
-        $raids = @(Get-IcyItems (Get-Section $gear @("best-raid-gear", "raid-gear-bis-list", "raid-gear-best-in-slot")))
-        $dungeons = @(Get-IcyItems (Get-Section $gear @("best-mythic-gear", "mythic-gear-bis-list", "mythic-gear-best-in-slot")))
+        $overallPanel = Get-IcyBisPanel $gear 0
+        $dungeonsPanel = Get-IcyBisPanel $gear 1
+        $raidsPanel = Get-IcyBisPanel $gear 2
+        $overall = @(Get-IcyItems $(if ($overallPanel) { $overallPanel } else { Get-Section $gear @("overall-best-in-slot", "best-overall-best-in-slot", "overall-bis-list") }))
+        $raids = @(Get-IcyItems $(if ($raidsPanel) { $raidsPanel } else { Get-Section $gear @("best-raid-gear", "raid-gear-bis-list", "raid-gear-best-in-slot") }))
+        $dungeons = @(Get-IcyItems $(if ($dungeonsPanel) { $dungeonsPanel } else { Get-Section $gear @("best-mythic-gear", "mythic-gear-bis-list", "mythic-gear-best-in-slot") }))
         if ($overall.Count -eq 0) { throw "Icy Veins overall list was empty" }
         $crafted = @($overall | Where-Object { $_.source -match '(?i)crafted|blacksmithing|leatherworking|tailoring|engineering|jewelcrafting|inscription' } | Select-Object itemID, slot, name, source)
-        $faqTargets = Get-GuideFAQCatalystTargets $gear $lootCatalog
-        if ($faqTargets.unresolved.Count -gt 0) {
-            throw ("Unresolved catalyst FAQ target(s): " + ($faqTargets.unresolved -join "; "))
+        $faqTargets = Get-GuideFAQCatalystTargets $gear $lootCatalog $spec.id
+        $overallPanelTargets = Get-PanelCatalystTargets $overallPanel $lootCatalog $spec.id
+        $raidPanelTargets = Get-PanelCatalystTargets $raidsPanel $lootCatalog $spec.id
+        $dungeonPanelTargets = Get-PanelCatalystTargets $dungeonsPanel $lootCatalog $spec.id
+        $wowheadCatalystRequirements = Get-WowheadCatalystRequirements $wowhead $lootCatalog
+        $wowheadCatalystTargets = Get-WowheadCatalystTargets $wowheadCatalystRequirements.requirements $lootCatalog $spec.id
+        $unresolved = @(
+            $faqTargets.unresolved +
+            $overallPanelTargets.unresolved +
+            $raidPanelTargets.unresolved +
+            $dungeonPanelTargets.unresolved +
+            $wowheadCatalystRequirements.unresolved |
+            Sort-Object -Unique
+        )
+        $unresolved += $wowheadCatalystTargets.unresolved
+        if ($unresolved.Count -gt 0) {
+            throw ("Unresolved catalyst target(s): " + ($unresolved -join "; "))
         }
         $faqCatalyst = @(
             (Get-IcyCatalystTargets $gear) +
-            $faqTargets.targets
+            $faqTargets.targets +
+            $overallPanelTargets.targets +
+            $wowheadCatalystTargets.targets
             | Where-Object { $_.itemID -and $_.source }
             | Sort-Object itemID, source -Unique
         )
-        $raidFaqCatalyst = @($faqCatalyst | Where-Object { $raidSourceNames -contains $_.source })
-        $dungeonFaqCatalyst = @($faqCatalyst | Where-Object { $raidSourceNames -notcontains $_.source })
-        $cardOverallCatalyst = @(Get-CardCatalystTargets $overall $lootCatalog.byItemID)
-        $cardRaidCatalyst = @($cardOverallCatalyst | Where-Object { $raidSourceNames -contains $_.source })
-        $cardDungeonCatalyst = @($cardOverallCatalyst | Where-Object { $raidSourceNames -notcontains $_.source })
+        $raidFaqCatalyst = @(
+            $faqCatalyst + $raidPanelTargets.targets |
+            Where-Object { IsRaidCatalogSource $_.source } |
+            Sort-Object itemID, source -Unique
+        )
+        $dungeonFaqCatalyst = @(
+            $faqCatalyst + $dungeonPanelTargets.targets |
+            Where-Object { -not (IsRaidCatalogSource $_.source) } |
+            Sort-Object itemID, source -Unique
+        )
+        $cardOverallCatalyst = @(Get-CardCatalystTargets $overall $lootCatalog $spec.id)
+        $cardRaidCatalyst = @(Get-CardCatalystTargets $raids $lootCatalog $spec.id)
+        $cardDungeonCatalyst = @(Get-CardCatalystTargets $dungeons $lootCatalog $spec.id)
         $catalyst = [pscustomobject]@{
             overall = @(
                 $faqCatalyst + $cardOverallCatalyst
@@ -471,9 +808,25 @@ foreach ($spec in $specs) {
                 | Sort-Object itemID, source -Unique
             )
         }
-        Assert-CatalystTargets $catalyst.overall $lootCatalog "$($spec.specName) $($spec.className) overall"
-        Assert-CatalystTargets $catalyst.raids $lootCatalog "$($spec.specName) $($spec.className) raids"
-        Assert-CatalystTargets $catalyst.dungeons $lootCatalog "$($spec.specName) $($spec.className) dungeons"
+        foreach ($mode in @("overall", "raids", "dungeons")) {
+            $catalyst.$mode = @(
+                $catalyst.$mode |
+                Where-Object { -not $lootCatalog.excludedItemIDs.ContainsKey([int]$_.itemID) } |
+                ForEach-Object {
+                    [pscustomobject]@{
+                        itemID = $_.itemID
+                        slot = $_.slot
+                        name = $_.name
+                        source = $_.source
+                        tierToken = $_.tierToken -or $lootCatalog.tierTokenIDs.ContainsKey([int]$_.itemID)
+                    }
+                } |
+                Sort-Object itemID, source -Unique
+            )
+        }
+        Assert-CatalystTargets $catalyst.overall $lootCatalog $spec.id "$($spec.specName) $($spec.className) overall"
+        Assert-CatalystTargets $catalyst.raids $lootCatalog $spec.id "$($spec.specName) $($spec.className) raids"
+        Assert-CatalystTargets $catalyst.dungeons $lootCatalog $spec.id "$($spec.specName) $($spec.className) dungeons"
         $records += [pscustomobject]@{
             id = $spec.id
             name = "$($spec.specName) $($spec.className)"
@@ -529,7 +882,8 @@ foreach ($record in ($records | Sort-Object id)) {
     foreach ($mode in @("overall", "raids", "dungeons")) {
         $lines.Add("            $mode = {")
         foreach ($item in ($record.catalyst.$mode | Where-Object { $_.itemID -and $_.source } | Sort-Object itemID, source -Unique)) {
-            $lines.Add("                { itemID = $($item.itemID), slot = `"$(Escape-Lua $item.slot)`", name = `"$(Escape-Lua $item.name)`", source = `"$(Escape-Lua $item.source)`" },")
+            $tierToken = if ($item.tierToken) { ", tierToken = true" } else { "" }
+            $lines.Add("                { itemID = $($item.itemID), slot = `"$(Escape-Lua $item.slot)`", name = `"$(Escape-Lua $item.name)`", source = `"$(Escape-Lua $item.source)`"$tierToken },")
         }
         $lines.Add("            },")
     }
