@@ -475,7 +475,7 @@ end)
 
 local footerLegend = CreateFrame("Frame", nil, panel)
 footerLegend:SetPoint("BOTTOMLEFT", panel, "BOTTOMLEFT", 18, 8)
-footerLegend:SetPoint("BOTTOMRIGHT", panel, "BOTTOMRIGHT", -202, 8)
+footerLegend:SetPoint("BOTTOMRIGHT", panel, "BOTTOMRIGHT", -334, 8)
 footerLegend:SetHeight(20)
 footerLegend:SetFrameLevel(panel:GetFrameLevel() + 5)
 
@@ -526,8 +526,7 @@ CreateLegendEntry("Unwanted", "unwanted", 76, "Unwanted loot", "Eligible pool lo
 CreateLegendEntry("Won", "won", 52, "Already won", "This item was already received from a bonus roll and is removed from the pool.", 216)
 
 local bonusRollCountFrame = CreateFrame("Frame", nil, panel)
-bonusRollCountFrame:SetSize(142, 20)
-bonusRollCountFrame:SetPoint("BOTTOMRIGHT", panel, "BOTTOMRIGHT", -132, 7)
+bonusRollCountFrame:SetSize(126, 20)
 bonusRollCountFrame:EnableMouse(true)
 local bonusRollCount = bonusRollCountFrame:CreateFontString(nil, "OVERLAY")
 bonusRollCount:SetAllPoints()
@@ -556,6 +555,7 @@ local footerControls = CreateFrame("Frame", nil, panel)
 footerControls:SetSize(192, 22)
 footerControls:SetPoint("BOTTOMRIGHT", panel, "BOTTOMRIGHT", -26, 6)
 footerControls:SetFrameLevel(panel:GetFrameLevel() + 6)
+bonusRollCountFrame:SetPoint("RIGHT", footerControls, "LEFT", -8, 0)
 
 local function CreateCogButton(parent, size)
     local button = CreateFrame("Button", nil, parent, "UIPanelButtonTemplate")

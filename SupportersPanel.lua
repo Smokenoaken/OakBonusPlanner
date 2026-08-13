@@ -24,7 +24,9 @@ StaticPopupDialogs["OAK_BONUS_PLANNER_COPY_URL"] = {
 
 local panel = CreateFrame("Frame", "OakBonusPlannerSupportersFrame", parent, "BackdropTemplate")
 addonTable.SupportersPanel = panel
-panel:SetSize(440, 390)
+-- Four readable columns need room for the full, refreshed supporter list.
+-- Reserve the bottom 58px for the social links so names never overlap them.
+panel:SetSize(440, 450)
 panel:SetPoint("CENTER", parent, "CENTER", 0, 0)
 panel:SetFrameStrata("DIALOG")
 panel:SetFrameLevel(parent:GetFrameLevel() + 30)

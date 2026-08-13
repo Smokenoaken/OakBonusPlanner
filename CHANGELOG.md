@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.5.0-beta.6
+
+- Fixed the Supporters panel list overlapping its social-link controls.
+- Fixed the footer Supporters control overlapping the Nebulous Voidcore count.
+
 ## v0.5.0-beta.5
 
 - Fixed GitHub release packaging on Linux so tagged beta releases publish correctly to Wago.
