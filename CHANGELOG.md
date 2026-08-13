@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.5.0-beta.2
+
+- Validated Season 2 BIS and catalyst targets across every class and specialization.
+- Refined static loot-eligibility data, source icons, item-slot labels, and source counts.
+- Removed non-rollable Curios and cosmetic appearances from eligible Voidcore pools.
+- Improved planner footer layout, including combined Rescan/reset behavior and Voidcore visibility.
+
 ## v0.5.0-beta.1
 
 - First public beta for Midnight Season 2.
