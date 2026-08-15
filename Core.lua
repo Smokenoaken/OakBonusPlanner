@@ -34,6 +34,31 @@ local Loot = OakBonusPlannerLoot or {}
 local sourceRecommendationCache = {}
 local bonusRollScanToken = 0
 
+local function ApplyLootEligibilityAdditions()
+    for itemID, classAdditions in pairs(addonTable.Data.LootEligibilityAdditions or {}) do
+        local itemInfo = Loot.ItemDatabase and Loot.ItemDatabase[itemID]
+        if itemInfo then
+            itemInfo.classes = itemInfo.classes or {}
+            for classID, specAdditions in pairs(classAdditions) do
+                local specs = itemInfo.classes[classID] or {}
+                itemInfo.classes[classID] = specs
+                for _, specID in ipairs(specAdditions) do
+                    local exists = false
+                    for _, currentSpecID in ipairs(specs) do
+                        if currentSpecID == specID then
+                            exists = true
+                            break
+                        end
+                    end
+                    if not exists then table.insert(specs, specID) end
+                end
+            end
+        end
+    end
+end
+
+ApplyLootEligibilityAdditions()
+
 local function GetLootItemInfo(itemID)
     return Loot.ItemDatabase and Loot.ItemDatabase[itemID]
 end
@@ -85,6 +110,13 @@ function addonTable.GetAvailableBonusRollCount()
     local getCurrencyInfo = C_CurrencyInfo and C_CurrencyInfo.GetCurrencyInfo
     local currency = currencyID and getCurrencyInfo and getCurrencyInfo(currencyID)
     return currency and math.max(0, tonumber(currency.quantity) or 0) or 0
+end
+
+function addonTable.ResetBISOverrides(skipRefresh)
+    wipe(addonTable.DB.bisOverrides)
+    wipe(addonTable.DB.customBISItems)
+    sourceRecommendationCache = {}
+    if not skipRefresh and addonTable.Refresh then addonTable.Refresh() end
 end
 
 local function GetPlan(specID)
@@ -1368,6 +1400,41 @@ function addonTable.GetLootSpecRecommendation(classID, targetSpecID)
     }
 end
 
+-- Return every remaining source pool in which an item is currently wanted for
+-- the player's live specialization. This deliberately ignores the planner's
+-- browsing selection: Weekly Vault rewards and bonus-roll results always
+-- belong to the character actually receiving them.
+function addonTable.GetCurrentBISMatches(itemID)
+    itemID = tonumber(itemID)
+    if not itemID then return {} end
+
+    local classID, targetSpecID = addonTable.GetCurrentSpec()
+    local plan = GetPlan(targetSpecID)
+    if not classID or not targetSpecID or not plan then return {} end
+
+    local matches = {}
+    for _, source in ipairs(addonTable.Data.Sources) do
+        local recommendation = addonTable.GetSourceLootSpecRecommendation(source, plan, classID, targetSpecID, "overall")
+        local stats = recommendation and recommendation.stats
+        if stats and stats.pool[itemID] and stats.desired[itemID] and not IsItemWon(itemID) then
+            table.insert(matches, {
+                source = source,
+                lootSpecID = recommendation.specID,
+                chance = stats.chance,
+                desiredRemaining = stats.desiredRemaining,
+                poolRemaining = stats.poolRemaining,
+                onlyWanted = stats.desiredRemaining == 1,
+            })
+        end
+    end
+    table.sort(matches, function(a, b)
+        if a.onlyWanted ~= b.onlyWanted then return a.onlyWanted end
+        if a.chance ~= b.chance then return a.chance > b.chance end
+        return a.source.name < b.source.name
+    end)
+    return matches
+end
+
 function addonTable.GetPlanRows()
     local classID, targetSpecID, lootSpecID, recommendation = addonTable.GetSelectedLootSpec()
     local plan = GetPlan(targetSpecID)
@@ -1453,6 +1520,11 @@ function addonTable.SetSelection(classID, specID)
     if addonTable.Refresh then addonTable.Refresh() end
 end
 
+function addonTable.SetSlotFilter(slotID)
+    addonTable.DB.slotFilter = type(slotID) == "number" and slotID or nil
+    if addonTable.Refresh then addonTable.Refresh() end
+end
+
 function addonTable.SetLootSpec(specID)
     addonTable.CharDB.lootSpecID = specID
     if addonTable.Refresh then addonTable.Refresh() end
@@ -1497,10 +1569,15 @@ function addonTable.HandleBonusRoll(rewardType, rewardLink)
     if rewardType ~= "item" or not rewardLink then return end
     local itemID = tonumber(string.match(rewardLink, "item:(%d+)"))
     if not itemID then return end
+    local bisMatches = addonTable.GetCurrentBISMatches(itemID)
     addonTable.CharDB.bonusRolls[tostring(itemID)] = true
     sourceRecommendationCache = {}
     CacheItemName(itemID)
     if addonTable.Refresh then addonTable.Refresh() end
+    if #bisMatches > 0 and addonTable.DB.showBISWinToast and addonTable.ShowBISWinToast then
+        addonTable.ShowBISWinToast(itemID, bisMatches)
+    end
+    if addonTable.RefreshVaultAdvisor then addonTable.RefreshVaultAdvisor() end
 end
 
 local eventFrame = CreateFrame("Frame")

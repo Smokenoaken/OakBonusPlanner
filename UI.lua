@@ -131,9 +131,12 @@ local sourceButton = CreateClassicButton(controls, "Source", 100, 24)
 sourceButton:SetPoint("LEFT", classSpecButton, "RIGHT", 4, 0)
 local sortButton = CreateClassicButton(controls, "Sort", 110, 24)
 sortButton:SetPoint("LEFT", sourceButton, "RIGHT", 4, 0)
+local slotButton = CreateClassicButton(controls, "Slot: All", 100, 24)
+slotButton:SetPoint("LEFT", sortButton, "RIGHT", 4, 0)
 classSpecButton:SetTooltip("Class and specialization", "Choose the character spec whose BIS targets you want to plan.")
 sourceButton:SetTooltip("BIS source", "Icy Veins supplies dungeon and raid lists. Wowhead supplies the overall list when available.")
 sortButton:SetTooltip("Sort loot sources", "Choose highest BIS chance, source name, or total eligible drops.")
+slotButton:SetTooltip("Gear-slot filter", "Show only this gear slot in each source. The displayed BIS chance still uses the full eligible Voidcore pool.")
 
 local function CreateMenu(name, width)
     local menu = CreateFrame("Frame", name, UIParent, "BackdropTemplate")
@@ -161,6 +164,8 @@ local sourceMenu = CreateMenu("OakBonusPlannerSourceMenu", 132)
 sourceMenu:SetPoint("TOPLEFT", sourceButton, "BOTTOMLEFT", 0, -3)
 local sortMenu = CreateMenu("OakBonusPlannerSortMenu", 168)
 sortMenu:SetPoint("TOPLEFT", sortButton, "BOTTOMLEFT", 0, -3)
+local slotMenu = CreateMenu("OakBonusPlannerSlotMenu", 142)
+slotMenu:SetPoint("TOPLEFT", slotButton, "BOTTOMLEFT", 0, -3)
 local itemMenu
 
 local function HideMenus()
@@ -168,6 +173,7 @@ local function HideMenus()
     specMenu:Hide()
     sourceMenu:Hide()
     sortMenu:Hide()
+    slotMenu:Hide()
     if itemMenu then itemMenu:Hide() end
 end
 
@@ -274,9 +280,39 @@ for index, sortOption in ipairs(sortOptions) do
     end)
 end
 
+local slotOptions = {
+    { id = false, label = "All slots" },
+    { id = 0, label = "Head" },
+    { id = 1, label = "Neck" },
+    { id = 2, label = "Shoulder" },
+    { id = 3, label = "Back" },
+    { id = 4, label = "Chest" },
+    { id = 5, label = "Waist" },
+    { id = 6, label = "Wrist" },
+    { id = 7, label = "Hands" },
+    { id = 8, label = "Legs" },
+    { id = 9, label = "Feet" },
+    { id = 10, label = "Main Hand" },
+    { id = 11, label = "Ring" },
+    { id = 12, label = "Trinket" },
+    { id = 13, label = "Off Hand" },
+}
+local slotFilterLabels = { [false] = "All" }
+for _, slotOption in ipairs(slotOptions) do
+    slotFilterLabels[slotOption.id] = slotOption.label
+end
+slotMenu:SetHeight(#slotOptions * 22 + 10)
+for index, slotOption in ipairs(slotOptions) do
+    MakeMenuButton(slotMenu, index, slotOption.label, function()
+        addonTable.SetSlotFilter(slotOption.id)
+        HideMenus()
+    end)
+end
+
 classSpecButton:SetScript("OnClick", function()
     sourceMenu:Hide()
     sortMenu:Hide()
+    slotMenu:Hide()
     specMenu:Hide()
     classMenu:SetShown(not classMenu:IsShown())
 end)
@@ -284,13 +320,22 @@ sourceButton:SetScript("OnClick", function()
     classMenu:Hide()
     specMenu:Hide()
     sortMenu:Hide()
+    slotMenu:Hide()
     sourceMenu:SetShown(not sourceMenu:IsShown())
 end)
 sortButton:SetScript("OnClick", function()
     classMenu:Hide()
     specMenu:Hide()
     sourceMenu:Hide()
+    slotMenu:Hide()
     sortMenu:SetShown(not sortMenu:IsShown())
+end)
+slotButton:SetScript("OnClick", function()
+    classMenu:Hide()
+    specMenu:Hide()
+    sourceMenu:Hide()
+    sortMenu:Hide()
+    slotMenu:SetShown(not slotMenu:IsShown())
 end)
 local summary = panel:CreateFontString(nil, "OVERLAY")
 summary:SetPoint("TOPLEFT", panel, "TOPLEFT", 18, -108)
@@ -579,8 +624,10 @@ local function UpdateBonusRollCount()
 end
 
 local currencyWatcher = CreateFrame("Frame")
-currencyWatcher:SetScript("OnEvent", function(_, _, currencyID)
-    if currencyID == addonTable.Data.BonusRollCurrencyID then UpdateBonusRollCount() end
+currencyWatcher:SetScript("OnEvent", function()
+    -- CURRENCY_DISPLAY_UPDATE does not consistently provide the matching currency
+    -- ID for every transaction, so re-read the one currency we display.
+    UpdateBonusRollCount()
 end)
 
 local footerControls = CreateFrame("Frame", nil, panel)
@@ -618,7 +665,7 @@ local rescanButton = CreateClassicButton(footerControls, "Reset + Rescan", 76, 2
 rescanButton:SetPoint("RIGHT", optionsButton, "LEFT", -4, 0)
 local supportersButton = CreateClassicButton(footerControls, "Supporters", 82, 22)
 supportersButton:SetPoint("RIGHT", rescanButton, "LEFT", -4, 0)
-rescanButton:SetTooltip("Reset and rescan bonus-roll history", "Clears the locally recorded won items, then rebuilds them from Blizzard's Season 2 Voidcache tooltips for your current loot specialization.")
+rescanButton:SetTooltip("Restore guide BIS and rescan", "Clears locally recorded won items, restores the Icy Veins/Wowhead BIS choices you changed, then rebuilds bonus-roll history from Blizzard's Season 2 Voidcache tooltips for your current loot specialization.")
 supportersButton:SetTooltip("Supporters and links", "Thank the Oakensoul Patreon community, or open Oak community links.")
 optionsButton:SetScript("OnClick", function()
     HideMenus()
@@ -626,6 +673,7 @@ optionsButton:SetScript("OnClick", function()
 end)
 rescanButton:SetScript("OnClick", function()
     HideMenus()
+    if addonTable.ResetBISOverrides then addonTable.ResetBISOverrides(true) end
     addonTable.ResetObtained()
     addonTable.Refresh()
     if addonTable.ScanBonusRollHistory then addonTable.ScanBonusRollHistory(true) end
@@ -890,7 +938,8 @@ local function CreateSourceRow(index)
 end
 
 local function UpdateRow(row, data, top, index)
-    local itemCount = #data.items
+    local items = data.displayItems or data.items
+    local itemCount = #items
     local itemLines = math.max(1, math.ceil(itemCount / ROW_COLUMNS))
     local height = math.max(96, 40 + (itemLines * ITEM_LINE_HEIGHT))
     row:ClearAllPoints()
@@ -920,7 +969,7 @@ local function UpdateRow(row, data, top, index)
     row.icon:SetDesaturated(false)
     row:Show()
 
-    for itemIndex, item in ipairs(data.items) do
+    for itemIndex, item in ipairs(items) do
         local button = row.itemButtons[itemIndex] or CreateItemButton(row)
         row.itemButtons[itemIndex] = button
         button:ClearAllPoints()
@@ -1099,6 +1148,7 @@ function addonTable.Refresh()
     classSpecButton:SetLabel(className .. " (" .. specName .. ")")
     sourceButton:SetLabel("Source: " .. (addonTable.DB.source == "wowhead" and "Wowhead" or "Icy Veins"))
     sortButton:SetLabel("Sort: " .. (sortShortLabels[addonTable.DB.sortMode or "chance"] or "BIS"))
+    slotButton:SetLabel("Slot: " .. (slotFilterLabels[addonTable.DB.slotFilter or false] or "All"))
     subtitle:SetText(addonTable.Data.seasonLabel .. "  •  Current spec: " .. specName)
     UpdateBonusRollCount()
     for id, tab in pairs(tabs) do
@@ -1111,13 +1161,27 @@ function addonTable.Refresh()
     end
     SetGuideNotes(plan)
 
+    local visibleRows = {}
+    local slotFilter = addonTable.DB.slotFilter
+    for _, data in ipairs(rowsData) do
+        if slotFilter then
+            data.displayItems = {}
+            for _, item in ipairs(data.items) do
+                if item.slotID == slotFilter then table.insert(data.displayItems, item) end
+            end
+        else
+            data.displayItems = nil
+        end
+        if not slotFilter or #data.displayItems > 0 then table.insert(visibleRows, data) end
+    end
+
     local top = 0
-    for index, data in ipairs(rowsData) do
+    for index, data in ipairs(visibleRows) do
         local row = rows[index] or CreateSourceRow(index)
         top = top + (index > 1 and ROW_GAP or 0)
         top = top + UpdateRow(row, data, top, index)
     end
-    for index = #rowsData + 1, #rows do rows[index]:Hide() end
+    for index = #visibleRows + 1, #rows do rows[index]:Hide() end
     content:SetHeight(math.max(1, top))
 end
 

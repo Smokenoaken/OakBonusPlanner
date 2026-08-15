@@ -17,6 +17,7 @@ Data/LootRaids.lua
 Data/LootItems.lua
 Supporters.lua
 Core.lua
+VaultAdvisor.lua
 UI.lua
 SupportersPanel.lua
 Options.lua

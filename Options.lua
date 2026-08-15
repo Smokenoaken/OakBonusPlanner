@@ -2,7 +2,7 @@ local _, addonTable = ...
 
 local panel = CreateFrame("Frame", "OakBonusPlannerOptionsFrame", UIParent, "BackdropTemplate")
 addonTable.OptionsPanel = panel
-panel:SetSize(330, 252)
+panel:SetSize(330, 350)
 panel:SetFrameStrata("DIALOG")
 panel:SetToplevel(true)
 panel:SetFrameLevel((addonTable.Frame and addonTable.Frame:GetFrameLevel() or 0) + 20)
@@ -44,7 +44,7 @@ description:SetJustifyH("LEFT")
 description:SetWordWrap(true)
 addonTable.ApplyFont(description, "small")
 description:SetTextColor(unpack(addonTable.Theme.muted))
-description:SetText("Choose whether the Oak Plan button stays on your minimap. Right-click the button to open this panel.")
+description:SetText("Choose your Oak Plan display and optional Vault helpers. Right-click the minimap button to open this panel.")
 
 local minimapCheck = CreateFrame("CheckButton", nil, panel, "UICheckButtonTemplate")
 minimapCheck:SetPoint("TOPLEFT", 14, -96)
@@ -61,15 +61,65 @@ minimapCheck:SetScript("OnClick", function(self)
     end
 end)
 
+local function CreateOptionCheck(y, labelText, tooltipTitle, tooltipText, getter, setter)
+    local check = CreateFrame("CheckButton", nil, panel, "UICheckButtonTemplate")
+    check:SetPoint("TOPLEFT", 14, y)
+    local label = panel:CreateFontString(nil, "OVERLAY")
+    label:SetPoint("LEFT", check, "RIGHT", 4, 0)
+    addonTable.ApplyFont(label, "regular")
+    label:SetText(labelText)
+    label:SetTextColor(unpack(addonTable.Theme.text))
+    check:SetScript("OnClick", function(self)
+        setter(self:GetChecked() == true)
+        if addonTable.RefreshVaultAdvisor then addonTable.RefreshVaultAdvisor() end
+    end)
+    check:SetScript("OnEnter", function(self)
+        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+        GameTooltip:SetText(tooltipTitle, 1, 0.82, 0)
+        GameTooltip:AddLine(tooltipText, 1, 1, 1, true)
+        GameTooltip:Show()
+    end)
+    check:SetScript("OnLeave", function() GameTooltip:Hide() end)
+    check.GetOptionValue = getter
+    return check
+end
+
+local vaultMarkerCheck = CreateOptionCheck(
+    -124,
+    "Mark BIS items in the Weekly Vault",
+    "Weekly Vault BIS markers",
+    "Show a gold BIS star on revealed Weekly Vault rewards that remain wanted by your current character.",
+    function() return addonTable.DB.showVaultBISMarkers ~= false end,
+    function(value) addonTable.DB.showVaultBISMarkers = value end
+)
+
+local vaultAdvisorCheck = CreateOptionCheck(
+    -152,
+    "Show the Great Vault BIS advisor",
+    "Great Vault BIS advisor",
+    "Show an optional recommendation above the Vault. It applies the finite-pool rule: take a wanted item when it is the only remaining target in that source's bonus-roll pool; otherwise it suggests bonus rolls first.",
+    function() return addonTable.DB.showVaultAdvisor == true end,
+    function(value) addonTable.DB.showVaultAdvisor = value end
+)
+
+local bisWinToastCheck = CreateOptionCheck(
+    -180,
+    "Celebrate BIS Voidcore wins",
+    "BIS Voidcore celebration",
+    "Show a short Oak Bonus Planner toast after a bonus roll awards a remaining BIS, catalyst, or tier target.",
+    function() return addonTable.DB.showBISWinToast ~= false end,
+    function(value) addonTable.DB.showBISWinToast = value end
+)
+
 local scaleLabel = panel:CreateFontString(nil, "OVERLAY")
-scaleLabel:SetPoint("TOPLEFT", 18, -132)
+scaleLabel:SetPoint("TOPLEFT", 18, -220)
 addonTable.ApplyFont(scaleLabel, "regular")
 scaleLabel:SetText("Planner scale")
 scaleLabel:SetTextColor(unpack(addonTable.Theme.text))
 
 local scaleValue = CreateFrame("EditBox", nil, panel, "InputBoxTemplate")
 scaleValue:SetSize(46, 20)
-scaleValue:SetPoint("TOPRIGHT", -22, -128)
+scaleValue:SetPoint("TOPRIGHT", -22, -216)
 scaleValue:SetAutoFocus(false)
 scaleValue:SetNumeric(false)
 scaleValue:SetMaxLetters(4)
@@ -77,8 +127,8 @@ scaleValue:SetJustifyH("CENTER")
 addonTable.ApplyFont(scaleValue, "small")
 
 local scaleSlider = CreateFrame("Slider", nil, panel, "OptionsSliderTemplate")
-scaleSlider:SetPoint("TOPLEFT", 20, -157)
-scaleSlider:SetPoint("TOPRIGHT", -76, -157)
+scaleSlider:SetPoint("TOPLEFT", 20, -245)
+scaleSlider:SetPoint("TOPRIGHT", -76, -245)
 scaleSlider:SetHeight(18)
 scaleSlider:SetMinMaxValues(0.75, 1.50)
 scaleSlider:SetValueStep(0.05)
@@ -143,6 +193,9 @@ slashHint:SetText("Commands: /obp to open the planner  •  /obp options")
 
 local function RefreshOptions()
     minimapCheck:SetChecked(addonTable.DB.hideMinimapButton ~= true)
+    vaultMarkerCheck:SetChecked(vaultMarkerCheck.GetOptionValue())
+    vaultAdvisorCheck:SetChecked(vaultAdvisorCheck.GetOptionValue())
+    bisWinToastCheck:SetChecked(bisWinToastCheck.GetOptionValue())
     -- Refreshing controls only reads the account-wide saved setting.
     local scale = addonTable.GetPlannerScale()
     scaleSlider:SetValue(scale)

@@ -3,7 +3,7 @@ local addonName, addonTable = ...
 addonTable.Data = {
     seasonID = "midnight-season-2",
     seasonLabel = "Midnight Season 2",
-    dataVersion = "2026-08-12.12.1-s2-keystoneloot-db",
+    dataVersion = "2026-08-15.12.1-s2-eligibility-fixes",
     sourceLabel = "Icy Veins + Wowhead Season 2 data",
     sourceURL = "https://www.icy-veins.com/wow/beast-mastery-hunter-pve-dps-gear-best-in-slot",
     wowheadURL = "https://www.wowhead.com/guide/classes/hunter/beast-mastery/bis-gear",
@@ -105,9 +105,19 @@ addonTable.Data.BonusRollExcludedItems = {
     [281227] = true, -- Soulcoiler's Rush'kah: cosmetic appearance, not a Voidcore reward.
 }
 
+-- The upstream generated table is a useful season baseline, but Blizzard's
+-- live Adventure Guide is authoritative for spec eligibility. Keep verified
+-- additions here instead of editing generated data, so a future import cannot
+-- silently discard a correction. Zul'jin's Guillotine Technique is listed for
+-- Guardian in Blizzard's Coiled Altar loot list as well as Feral.
+addonTable.Data.LootEligibilityAdditions = {
+    [270173] = { [11] = { 104 } }, -- Zul'jin's Guillotine Technique: Guardian
+}
+
 -- Current Season 2 Nebulous Voidcore currency. The planner reads it only
 -- while refreshing its visible UI; it does not poll bags or the currency tab.
-addonTable.Data.BonusRollCurrencyID = 3513
+-- 3513 is a different currency that can have a valid, unrelated quantity.
+addonTable.Data.BonusRollCurrencyID = 3418
 
 -- Blizzard's source-specific Voidcache tooltips retain the list of items that
 -- can still be won. On first open, OBP compares that list with this bundled

@@ -9,11 +9,18 @@ local CHAR_DB = OakBonusPlannerCharDB
 DB.version = DB.version or 1
 DB.source = DB.source or "icy-veins"
 DB.sortMode = DB.sortMode or "chance"
+DB.slotFilter = tonumber(DB.slotFilter) or nil
 DB.obtainedItems = DB.obtainedItems or {}
 DB.obtainedNames = DB.obtainedNames or {}
 DB.bisOverrides = DB.bisOverrides or {}
 DB.customBISItems = DB.customBISItems or {}
 DB.customBISNoticeShown = DB.customBISNoticeShown == true
+-- Vault markers and a successful-roll celebration are useful by default, but
+-- remain fully optional. The advisor is deliberately opt-in because it adds a
+-- separate decision panel to Blizzard's Vault UI.
+DB.showVaultBISMarkers = DB.showVaultBISMarkers ~= false
+DB.showVaultAdvisor = DB.showVaultAdvisor == true
+DB.showBISWinToast = DB.showBISWinToast ~= false
 DB.position = DB.position or { point = "CENTER", x = 0, y = 0 }
 local function NormalizePlannerScale(value)
     value = tonumber((tostring(value or 1):gsub("%%", ""))) or 1
