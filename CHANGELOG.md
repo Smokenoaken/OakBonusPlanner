@@ -1,3 +1,10 @@
+## v0.5.1
+
+- Validated complete Icy Veins and Wowhead BiS plans for all 40 class and specialization combinations, with strict one-per-slot coverage checks.
+- Custom BiS choices now replace the matching guide recommendation, include a one-time explanation, and can be restored with a right-click.
+- Refreshed Season 2 guide, catalyst, crafted, loot-eligibility, and item-link data, plus the Patreon supporter list.
+- Corrected the Discord release announcement link for the Oak Bonus Planner CurseForge page.
+
 # Changelog
 
 ## v0.5.0
