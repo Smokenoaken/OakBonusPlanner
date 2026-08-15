@@ -3,7 +3,7 @@
 ## Notes: Plan bonus rolls around your remaining Best in Slot targets.
 ## Author: Smokenoaken
 ## IconTexture: Interface\AddOns\OakBonusPlanner\Media\icon.png
-## Version: 0.5.1
+## Version: 0.5.2
 ## X-Curse-Project-ID: 1649769
 ## X-Wago-ID: qKQmEDKx
 ## SavedVariables: OakBonusPlannerDB

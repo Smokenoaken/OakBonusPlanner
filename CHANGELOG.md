@@ -1,3 +1,10 @@
+## v0.5.2
+
+- Fixed Nebulous Voidcore tracking to read Blizzard's live Voidcore currency instead of an unrelated currency.
+- Added optional Weekly Vault BIS stars and a Great Vault advisor based on the remaining finite bonus-roll pool.
+- Added a slot filter and made Reset + Rescan restore guide BiS recommendations before rescanning roll history.
+- Refreshed the active paid Patreon supporter list.
+
 ## v0.5.1
 
 - Validated complete Icy Veins and Wowhead BiS plans for all 40 class and specialization combinations, with strict one-per-slot coverage checks.
