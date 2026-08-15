@@ -16,7 +16,7 @@ jobs:
       ADDON_NAME: Oak Bonus Planner
       WEBHOOK_USERNAME: Oak Bonus Planner Releases
       EMBED_COLOR: "5763719"
-      CURSEFORGE_URL: https://www.curseforge.com/wow/addons/oak-bonus-planner
+      CURSEFORGE_URL: https://www.curseforge.com/wow/addons/oakbonusplanner
       WAGO_URL: https://addons.wago.io/addons/oakbonusplanner
 
     steps:

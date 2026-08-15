@@ -12,6 +12,8 @@ DB.sortMode = DB.sortMode or "chance"
 DB.obtainedItems = DB.obtainedItems or {}
 DB.obtainedNames = DB.obtainedNames or {}
 DB.bisOverrides = DB.bisOverrides or {}
+DB.customBISItems = DB.customBISItems or {}
+DB.customBISNoticeShown = DB.customBISNoticeShown == true
 DB.position = DB.position or { point = "CENTER", x = 0, y = 0 }
 local function NormalizePlannerScale(value)
     value = tonumber((tostring(value or 1):gsub("%%", ""))) or 1

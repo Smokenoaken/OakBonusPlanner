@@ -376,8 +376,13 @@ local function AddCraftedTooltipLines(button, tooltip)
     if button.itemData.maxItemLevel then
         tooltip:AddLine(string.format("Max crafted item level: %d", button.itemData.maxItemLevel), 1, 0.82, 0)
     end
+    if button.itemData.craftedStats then
+        tooltip:AddLine("Craft with: " .. button.itemData.craftedStats, 0.2, 1, 0.2, true)
+    end
     tooltip:AddLine("Recommended stats: " .. (button.itemData.recommendedStats or "See the current guide"), 1, 1, 1, true)
-    tooltip:AddLine("Recommended embellishment: " .. (button.itemData.recommendedEmbellishment or "See the current guide"), 1, 0.82, 0, true)
+    if button.itemData.recommendedEmbellishment then
+        tooltip:AddLine("Recommended embellishment: " .. button.itemData.recommendedEmbellishment, 1, 0.82, 0, true)
+    end
     if button.itemData.source and button.itemData.source ~= "" then
         tooltip:AddLine(button.itemData.source, 0.75, 0.75, 0.75, true)
     end
@@ -640,12 +645,39 @@ itemMenuTitle:SetTextColor(unpack(CLASSIC_MUTED))
 local bisAction = CreateClassicButton(itemMenu, "Set as BIS", 168, 24)
 bisAction:SetPoint("TOPLEFT", itemMenu, "TOPLEFT", 8, -24)
 local pendingItem
-bisAction:SetScript("OnClick", function()
-    if pendingItem then
-        addonTable.SetBISOverride(pendingItem.targetSpecID, pendingItem.itemID, not pendingItem.isBIS)
+StaticPopupDialogs["OAKBONUSPLANNER_CUSTOM_BIS_NOTICE"] = {
+    text = "Set %s as your custom BIS item?\n\nThis replaces the Icy Veins/Wowhead recommendation for this gear slot throughout the planner. Right-click your custom item later and choose Restore guide BIS to undo it.",
+    button1 = "Set custom BIS",
+    button2 = CANCEL,
+    timeout = 0,
+    whileDead = true,
+    hideOnEscape = true,
+    preferredIndex = 3,
+    OnAccept = function(_, itemData)
+        if not itemData then return end
+        addonTable.DB.customBISNoticeShown = true
+        addonTable.SetBISOverride(itemData.targetSpecID, itemData.itemID, true, itemData.slotID, itemData.guideItemID)
+    end,
+}
+
+local function ApplyBISMenuAction(itemData)
+    if not itemData then return end
+    if itemData.isManualBIS then
+        addonTable.SetBISOverride(itemData.targetSpecID, itemData.itemID, false, itemData.slotID)
+    elseif itemData.isBIS then
+        addonTable.SetBISOverride(itemData.targetSpecID, itemData.itemID, false, itemData.slotID)
+    elseif itemData.slotID and not addonTable.DB.customBISNoticeShown then
+        StaticPopup_Show("OAKBONUSPLANNER_CUSTOM_BIS_NOTICE", itemData.name, nil, itemData)
+    else
+        addonTable.SetBISOverride(itemData.targetSpecID, itemData.itemID, true, itemData.slotID, itemData.guideItemID)
     end
+end
+
+bisAction:SetScript("OnClick", function()
+    local itemData = pendingItem
     pendingItem = nil
     itemMenu:Hide()
+    ApplyBISMenuAction(itemData)
 end)
 itemMenu:SetHeight(57)
 itemMenu:SetScript("OnHide", function() pendingItem = nil end)
@@ -659,7 +691,8 @@ local function OpenItemMenu(button)
     sortMenu:Hide()
     pendingItem = itemData
     itemMenuTitle:SetText(itemData.name)
-    bisAction:SetLabel(itemData.isBIS and "Remove from BIS" or "Set as BIS")
+    bisAction:SetLabel(itemData.isManualBIS and "Restore guide BIS"
+        or (itemData.isBIS and "Remove from BIS" or "Set as BIS"))
     itemMenu:ClearAllPoints()
     itemMenu:SetPoint("TOPLEFT", button, "TOPRIGHT", 3, 0)
     itemMenu:Show()
@@ -750,6 +783,25 @@ local function CreateItemButton(parent)
     end)
     button:SetScript("OnEnter", function(self)
         if not self.itemData then return end
+        -- Detailed item data is not guaranteed to be warm when the frame is
+        -- first drawn. Rebuild the tooltip once it arrives so the level bonus
+        -- can be calculated from the item's real base level.
+        local itemID = self.itemData.itemID
+        if itemID and self.loadedTooltipItemID ~= itemID and self.loadingTooltipItemID ~= itemID
+            and Item and Item.CreateFromItemID then
+            self.loadingTooltipItemID = itemID
+            local item = Item:CreateFromItemID(itemID)
+            item:ContinueOnItemLoad(function()
+                if self.loadingTooltipItemID == itemID then
+                    self.loadingTooltipItemID = nil
+                    self.loadedTooltipItemID = itemID
+                end
+                if self:IsMouseOver() and self.itemData and self.itemData.itemID == itemID then
+                    local onEnter = self:GetScript("OnEnter")
+                    if onEnter then onEnter(self) end
+                end
+            end)
+        end
         self:SetBackdropBorderColor(unpack(CLASSIC_GOLD))
         GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
         local maxLink = self.itemData.maxItemLink
@@ -768,7 +820,7 @@ local function CreateItemButton(parent)
             local levelLabel = self.itemData.isCatalyst and "Max catalyst/tier link" or "Max Mythic link"
             GameTooltip:AddLine(string.format("%s: %d", levelLabel, self.itemData.maxItemLevel), 1, 0.82, 0)
         end
-        GameTooltip:AddLine("Right-click to change BIS status", 0.7, 0.7, 0.7)
+        GameTooltip:AddLine("Right-click to set a custom BIS for this slot", 0.7, 0.7, 0.7)
         if self.itemData.isWon then GameTooltip:AddLine("Already won by bonus roll", 0.7, 0.7, 0.7) end
         if self.itemData.isTierToken then
             GameTooltip:AddLine("Tier token: " .. (self.itemData.slotLabel or "Any tier slot"), 1, 0.82, 0.05)
@@ -917,23 +969,105 @@ local function IsCraftedWeapon(item)
     return slot == "Main Hand" or slot == "Off Hand" or slot == "One-Hand" or slot == "Two-Hand"
 end
 
+local function TrimText(value)
+    return (value or ""):gsub("^%s+", ""):gsub("%s+$", "")
+end
+
+local function IsIntrinsicEmbellishment(item, embellishment)
+    local itemText = string.lower(table.concat({
+        item and item.name or "",
+        item and item.source or "",
+    }, " "))
+    local token = string.lower(embellishment or "")
+    if token == "" then return false end
+    if string.find(itemText, token, 1, true) then return true end
+
+    -- Guide names sometimes use the finished crafted item while the guide
+    -- calls its embellishment by the component name. Match those families so
+    -- an already-embellished crafted piece is never recommended twice.
+    for _, family in ipairs({ "darkmoon", "arcanoweave", "root warden", "loa worshiper", "prismatic focusing" }) do
+        if string.find(token, family, 1, true) and string.find(itemText, family, 1, true) then
+            return true
+        end
+    end
+    return false
+end
+
+local function ItemHasIntrinsicEmbellishment(item)
+    local itemText = string.lower(table.concat({
+        item and item.name or "",
+        item and item.source or "",
+    }, " "))
+    for _, family in ipairs({ "darkmoon", "arcanoweave", "root warden", "loa worshiper", "prismatic focusing" }) do
+        if string.find(itemText, family, 1, true) then return true end
+    end
+    return false
+end
+
+local function GetApplicableEmbellishment(plan)
+    local recommendation = plan and plan.craftedEmbellishment
+    if not recommendation or recommendation == "" then return nil end
+
+    local crafted = plan and plan.crafted or {}
+    local hasCraftedWeapon = false
+    for _, item in ipairs(crafted) do
+        hasCraftedWeapon = hasCraftedWeapon or IsCraftedWeapon(item)
+    end
+
+    local applicable = {}
+    for component in string.gmatch(recommendation, "[^+]+") do
+        component = TrimText(component)
+        local lowerComponent = string.lower(component)
+        local weaponOnly = string.find(lowerComponent, "darkmoon sigil", 1, true) ~= nil
+            or string.find(lowerComponent, "hunter's ritual stone", 1, true) ~= nil
+        local alreadyUsed = false
+        for _, item in ipairs(crafted) do
+            if IsIntrinsicEmbellishment(item, component) then
+                alreadyUsed = true
+                break
+            end
+        end
+        if component ~= "" and (not weaponOnly or hasCraftedWeapon) and not alreadyUsed then
+            applicable[#applicable + 1] = component
+        end
+    end
+    return #applicable > 0 and table.concat(applicable, " + ") or nil
+end
+
+local function GetCraftedEmbellishmentSummary(plan, fallback)
+    local names, seen = {}, {}
+    for _, item in ipairs(plan and plan.crafted or {}) do
+        local name = item.embellishment
+        if name and name ~= "" and not ItemHasIntrinsicEmbellishment(item) and not seen[name] then
+            seen[name] = true
+            names[#names + 1] = name
+        end
+    end
+    return #names > 0 and table.concat(names, " + ") or fallback
+end
+
 local function SetGuideNotes(plan)
     craftedNote:SetText("Crafted:")
     local hasCraftedItem = false
-    local hasCraftedWeapon = false
+    local fallbackEmbellishment = GetApplicableEmbellishment(plan)
+    local applicableEmbellishment = GetCraftedEmbellishmentSummary(plan, fallbackEmbellishment)
     for index = 1, 2 do
         local item = plan and plan.crafted and plan.crafted[index]
         local button = craftedButtons[index]
         if item then
             hasCraftedItem = true
-            hasCraftedWeapon = hasCraftedWeapon or IsCraftedWeapon(item)
             button.itemData = item
             item.maxItemLevel = addonTable.GetMaxItemLevel(nil, true, item.slot)
-            item.craftedBonusIDs = item.bonusIDs or (plan and plan.craftedBonusIDs)
+            item.craftedBonusIDs = item.bonusIDs
             item.maxItemLink = addonTable.GetMaxItemLink(item.itemID, "crafted", nil,
                 item.slot, item.craftedBonusIDs)
             item.recommendedStats = plan and plan.statPriority
-            item.recommendedEmbellishment = item.embellishment or (plan and plan.craftedEmbellishment)
+            item.craftedStats = GetCraftedMissive(item.recommendedStats)
+            -- Prefer the guide's exact recommendation for this craft. Use the
+            -- guide-wide fallback only when the author did not name a specific
+            -- craft, and never add a second embellishment to an intrinsic one.
+            item.recommendedEmbellishment = ItemHasIntrinsicEmbellishment(item)
+                and nil or (item.embellishment or fallbackEmbellishment)
             button.icon:SetTexture((item.itemID and C_Item and C_Item.GetItemIconByID and C_Item.GetItemIconByID(item.itemID))
                 or "Interface\\Icons\\INV_Misc_QuestionMark")
             button.itemLevel:SetText(item.maxItemLevel and tostring(item.maxItemLevel) or "")
@@ -946,22 +1080,11 @@ local function SetGuideNotes(plan)
             button:Hide()
         end
     end
-    if hasCraftedItem then
-        local details = {}
-        local missive = GetCraftedMissive(plan and plan.statPriority)
-        if missive then details[#details + 1] = "Missive: " .. missive end
-        local embellishment = plan and plan.craftedEmbellishment
-        if embellishment and embellishment ~= "" then
-            if not hasCraftedWeapon then
-                embellishment = embellishment:gsub("Darkmoon Sigil:[^+]+%s*%+?%s*", "")
-                    :gsub("^%s*%+%s*", ""):gsub("%s+$", "")
-            end
-            if embellishment ~= "" then details[#details + 1] = "Embellishment: " .. embellishment end
-        end
-        craftedDetailsNote:SetText(#details > 0 and table.concat(details, "  •  ") or "")
-    else
-        craftedDetailsNote:SetText("")
-    end
+    local details = {}
+    local missive = hasCraftedItem and GetCraftedMissive(plan and plan.statPriority) or nil
+    if missive then details[#details + 1] = "Missive: " .. missive end
+    if applicableEmbellishment then details[#details + 1] = "Embellishment: " .. applicableEmbellishment end
+    craftedDetailsNote:SetText(#details > 0 and table.concat(details, "  •  ") or "")
     statNote:SetText(plan and plan.statPriority and plan.statPriority ~= ""
         and "Recommended stats: " .. plan.statPriority
         or "Recommended stats: see the linked guide and sim your character")

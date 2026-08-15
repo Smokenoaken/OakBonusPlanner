@@ -8,9 +8,19 @@ addonTable.Data = {
     sourceURL = "https://www.icy-veins.com/wow/beast-mastery-hunter-pve-dps-gear-best-in-slot",
     wowheadURL = "https://www.wowhead.com/guide/classes/hunter/beast-mastery/bis-gear",
     itemLevels = {
-        myth = 344,
-        crafted = 340,
+        myth = 334,
+        crafted = 331,
         voidforged = 353,
+    },
+    -- Midnight Season 2's rank-six Myth track and max-quality crafted
+    -- modifiers. These are link modifiers, not display-only labels.
+    itemLinkBonuses = {
+        mythTrack = 12854,
+        craftedQuality = 12497,
+        craftedSeason = 13751,
+        craftedMaximum = 13836,
+        epic = 1674,
+        ringNeck = 13534,
     },
 }
 
@@ -33,56 +43,21 @@ addonTable.Data.Specs = {
     [13] = { name = "Evoker", specs = { [1467] = "Devastation", [1468] = "Preservation", [1473] = "Augmentation" } },
 }
 
--- Season 2 defaults from the bundled crafted-gear guidance. Generated BIS
--- data may provide a more specific value on a spec or individual item later.
-addonTable.Data.CraftedEmbellishments = {
-    [71] = "Darkmoon Sigil: Hunt + Arcanoweave Lining",
-    [72] = "Darkmoon Sigil: Hunt + Arcanoweave Lining",
-    [73] = "Darkmoon Sigil: Hunt + Arcanoweave Lining",
-    [65] = "Darkmoon Sigil: Hunt + Arcanoweave Lining",
-    [66] = "Darkmoon Sigil: Hunt + Arcanoweave Lining",
-    [70] = "Darkmoon Sigil: Hunt + Arcanoweave Lining",
-    [253] = "Root Warden's Regalia + Arcanoweave Lining",
-    [254] = "Root Warden's Regalia + Arcanoweave Lining",
-    [255] = "Darkmoon Sigil: Hunt + Arcanoweave Lining",
-    [259] = "Darkmoon Sigil: Hunt + Arcanoweave Lining",
-    [260] = "Darkmoon Sigil: Void + Arcanoweave Lining + Prismatic Focusing Iris",
-    [261] = "Darkmoon Sigil: Hunt + Arcanoweave Lining",
-    [256] = "Darkmoon Sigil: Hunt + Arcanoweave Cord + Arcanoweave Lining",
-    [257] = "Darkmoon Sigil: Hunt + Arcanoweave Cord + Arcanoweave Lining",
-    [258] = "Darkmoon Sigil: Hunt + Arcanoweave Cord + Arcanoweave Lining",
-    [250] = "Darkmoon Sigil: Hunt + Arcanoweave Lining",
-    [251] = "Darkmoon Sigil: Hunt + Arcanoweave Lining",
-    [252] = "Darkmoon Sigil: Hunt + Arcanoweave Lining",
-    [262] = "Darkmoon Sigil: Hunt + Root Warden's Regalia",
-    [263] = "Darkmoon Sigil: Hunt + Arcanoweave Lining",
-    [264] = "Darkmoon Sigil: Hunt + Arcanoweave Lining",
-    [62] = "Darkmoon Sigil: Blood",
-    [63] = "Darkmoon Sigil: Hunt + Arcanoweave Lining",
-    [64] = "Darkmoon Sigil: Hunt + Arcanoweave Lining",
-    [265] = "Darkmoon Sigil: Hunt + Arcanoweave Lining",
-    [266] = "Darkmoon Sigil: Hunt + Arcanoweave Lining",
-    [267] = "Darkmoon Sigil: Hunt + Arcanoweave Lining",
-    [268] = "Darkmoon Sigil: Void + Loa Worshiper's Band",
-    [269] = "Darkmoon Sigil: Hunt + Loa Worshiper's Band",
-    [270] = "Darkmoon Sigil: Void + Arcanoweave Lining",
-    [102] = "Darkmoon Sigil: Hunt + Arcanoweave Lining",
-    [103] = "Darkmoon Sigil: Hunt + Arcanoweave Lining",
-    [104] = "Darkmoon Sigil: Hunt + Arcanoweave Lining",
-    [105] = "Darkmoon Sigil: Hunt + Arcanoweave Lining",
-    [577] = "Darkmoon Sigil: Hunt + Arcanoweave Lining",
-    [581] = "Darkmoon Sigil: Hunt + Loa Worshiper's Band",
-    [1480] = "Darkmoon Sigil: Hunt + Arcanoweave Lining",
-    [1467] = "Darkmoon Sigil: Hunt + Arcanoweave Lining",
-    [1468] = "Darkmoon Sigil: Hunt + Root Warden's Regalia + Arcanoweave Lining",
-    [1473] = "Darkmoon Sigil: Hunt + Arcanoweave Lining",
-}
+-- Profession recipe items intentionally resolve to a low base level. Crafted
+-- links use Blizzard's current client item level with a 331 target instead of
+-- stale static modifiers, which previously forced obsolete 285 tooltips.
 
--- Max-rank crafted links need the crafted-quality/stat/embellishment bonuses;
--- the recipe item IDs themselves intentionally resolve to a low base level.
--- These are the recommended Demonology Warlock bracer/cloak bonuses for S2.
-addonTable.Data.CraftedBonusIDs = {
-    [266] = { 12214, 12497, 12066, 8960, 12384, 8793, 13622, 13667, 12667 },
+-- The initial generator combined several independent guide parsers. These
+-- are the reviewed Season 2 choices for the small set of duplicate tier-slot
+-- candidates that combination produced. Keep one catalyst target per slot;
+-- future generator runs preserve the first explicit guide target by default.
+addonTable.Data.CatalystTargetPriority = {
+    [71] = { overall = { [4] = 268222, [8] = 271878 } },
+    [72] = { overall = { [4] = 268222, [8] = 271878 }, raids = { [0] = 268229 } },
+    [65] = { dungeons = { [8] = 273776 } },
+    [104] = { overall = { [0] = 271875 } },
+    [257] = { dungeons = { [4] = 239032 } },
+    [1468] = { dungeons = { [0] = 193765 } },
 }
 
 -- Season 2 raid token drops. The class group determines which shared-armor

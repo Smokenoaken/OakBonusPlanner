@@ -38,6 +38,44 @@ local function GetLootItemInfo(itemID)
     return Loot.ItemDatabase and Loot.ItemDatabase[itemID]
 end
 
+local catalystSlotIDs = {
+    head = 0, helm = 0,
+    shoulder = 2, shoulders = 2,
+    chest = 4,
+    hand = 7, hands = 7, glove = 7, gloves = 7,
+    leg = 8, legs = 8,
+}
+
+local function GetCatalystSlotID(target)
+    local slot = string.lower(tostring(target and target.slot or ""))
+    return catalystSlotIDs[slot]
+end
+
+local function NormalizeCatalystTargets(targets, priority)
+    local preferred, fallback = {}, {}
+    for _, target in ipairs(targets or {}) do
+        local slotID = GetCatalystSlotID(target)
+        if slotID then
+            if priority and priority[slotID] == target.itemID then
+                preferred[slotID] = target
+            elseif not fallback[slotID]
+                or ((not fallback[slotID].name or fallback[slotID].name == "")
+                    and target.name and target.name ~= "") then
+                -- A named entry came from an explicit guide reference. Prefer it
+                -- over a nameless catalog fallback for the same tier slot.
+                fallback[slotID] = target
+            end
+        end
+    end
+
+    local normalized = {}
+    for _, slotID in ipairs({ 0, 2, 4, 7, 8 }) do
+        local target = preferred[slotID] or fallback[slotID]
+        if target then normalized[#normalized + 1] = target end
+    end
+    return normalized
+end
+
 function addonTable.GetLootItemInfo(itemID)
     return GetLootItemInfo(itemID)
 end
@@ -60,10 +98,10 @@ local function GetPlan(specID)
     plan.icyVeinsURL = generated.icyVeinsURL
     plan.wowheadURL = generated.wowheadURL
     plan.crafted = generated.crafted
+    -- Crafted recommendations are guide-derived per spec. Do not fall back
+    -- to the old broad class defaults: they can be wrong for a specific guide
+    -- (for example, Arms recommends Adorned Fang rather than Arcanoweave).
     plan.craftedEmbellishment = generated.craftedEmbellishment
-        or addonTable.Data.CraftedEmbellishments[specID]
-    plan.craftedBonusIDs = generated.craftedBonusIDs
-        or addonTable.Data.CraftedBonusIDs[specID]
     -- Season 2 guides name the *base item to catalyze*, not merely the final
     -- tier appearance. Keep those source-specific inputs so a catalyst target
     -- is visible and desired only where it can actually be bonus-rolled.
@@ -72,12 +110,17 @@ local function GetPlan(specID)
         appliesTo = "all",
         season = 2,
         consumeSlot = true,
-        targetsByMode = generated.catalyst or {},
+        targetsByMode = {},
         allTargets = {},
         label = "Season 2 guide-recommended catalyst inputs",
     }
     for _, mode in ipairs({ "overall", "raids", "dungeons" }) do
-        for _, target in ipairs(plan.catalyst.targetsByMode[mode] or {}) do
+        local priority = addonTable.Data.CatalystTargetPriority
+            and addonTable.Data.CatalystTargetPriority[specID]
+            and addonTable.Data.CatalystTargetPriority[specID][mode]
+        plan.catalyst.targetsByMode[mode] = NormalizeCatalystTargets(
+            generated.catalyst and generated.catalyst[mode], priority)
+        for _, target in ipairs(plan.catalyst.targetsByMode[mode]) do
             plan.catalyst.allTargets[#plan.catalyst.allTargets + 1] = target
         end
     end
@@ -217,45 +260,84 @@ function addonTable.GetMaxItemLevel(slotID, isCrafted, slotName)
     return levels.myth
 end
 
--- Midnight's item-level bonus IDs are contiguous for the upgrade range used by
--- the current season. The item itself supplies the base level; these bonuses
--- make the tooltip resolve to the selected maximum track.
+-- Blizzard's item-level adjustment IDs cover the complete useful range for
+-- Midnight. This is the same base-level-difference model used by KeystoneLoot:
+-- it also handles profession recipe items, whose unmodified link is low level.
 local function GetItemLevelBonusID(levelDifference)
-    if not levelDifference or levelDifference == 0 or levelDifference < -100 or levelDifference > 200 then
+    if not levelDifference or levelDifference == 0 or levelDifference < -100 then
         return nil
     end
-    return 1372 + levelDifference + 100
+    if levelDifference <= 200 then
+        return 1372 + levelDifference + 100
+    elseif levelDifference <= 400 then
+        return 3130 + levelDifference - 201
+    elseif levelDifference <= 900 then
+        return 9455 + levelDifference - 401
+    end
+    return nil
+end
+
+local function HasBaseItemLevel(level)
+    return type(level) == "number" and level > 0
+end
+
+local function AddBonusID(bonusIDs, bonusID)
+    if not bonusID then return end
+    for _, existingID in ipairs(bonusIDs) do
+        if existingID == bonusID then return end
+    end
+    bonusIDs[#bonusIDs + 1] = bonusID
 end
 
 local function BuildMaxItemLink(itemID, itemKind, slotID, slotName, craftedBonusIDs)
     if not itemID then return nil end
     local bonusIDs = {}
     if itemKind == "crafted" and craftedBonusIDs then
-        for _, bonusID in ipairs(craftedBonusIDs) do bonusIDs[#bonusIDs + 1] = bonusID end
+        for _, bonusID in ipairs(craftedBonusIDs) do AddBonusID(bonusIDs, bonusID) end
+    end
+
+    local linkBonuses = addonTable.Data.itemLinkBonuses or {}
+    if itemKind == "crafted" then
+        -- A crafted base item has no selected rank until these modifiers are
+        -- present. They are the Season 2 equivalent of KeystoneLoot's active
+        -- upgrade-track modifier, and make the hyperlink resolve at 331.
+        AddBonusID(bonusIDs, linkBonuses.craftedQuality)
+        AddBonusID(bonusIDs, linkBonuses.craftedSeason)
+        AddBonusID(bonusIDs, linkBonuses.craftedMaximum)
     else
-        local baseItemLevel
-        if C_Item and C_Item.GetDetailedItemLevelInfo then
-            local _, _, level = C_Item.GetDetailedItemLevelInfo(itemID)
-            baseItemLevel = level
-        end
-
-        local targetLevel = addonTable.GetMaxItemLevel(slotID, itemKind == "crafted", slotName)
-        if itemKind ~= "raid" then
-            local levelBonusID = GetItemLevelBonusID(targetLevel and baseItemLevel and targetLevel - baseItemLevel)
-            if levelBonusID then bonusIDs[#bonusIDs + 1] = levelBonusID end
-        end
-
-        if itemKind == "raid" then
-            -- Mythic raid max-track bonus for Midnight Season 2.
-            bonusIDs[#bonusIDs + 1] = 13786
-        elseif itemKind == "dungeon" or itemKind == "catalyst" then
-            -- Myth track used by Mythic dungeon drops and Season 2 catalyst targets.
-            bonusIDs[#bonusIDs + 1] = 12806
-        end
+        -- Do not use Season 1's 12806 / 13786 modifiers here. Season 2 Myth
+        -- rank 6 is 12854 for both dungeon and raid gear.
+        AddBonusID(bonusIDs, linkBonuses.mythTrack)
     end
-    if #bonusIDs > 0 and not (itemKind == "crafted" and craftedBonusIDs) then
-        bonusIDs[#bonusIDs + 1] = 1674
+
+    local baseItemLevel
+    if C_Item and C_Item.GetDetailedItemLevelInfo then
+        local _, _, level = C_Item.GetDetailedItemLevelInfo(itemID)
+        baseItemLevel = level
     end
+    -- Detailed item info can remain absent for an ID even after its tooltip
+    -- asset loads. GetItemInfo supplies the base level in that case, including
+    -- profession recipes such as the level-68 crafted-item bases.
+    if not HasBaseItemLevel(baseItemLevel) and GetItemInfo then
+        baseItemLevel = select(4, GetItemInfo(itemID))
+    end
+    if not HasBaseItemLevel(baseItemLevel) and C_Item and C_Item.RequestLoadItemDataByID then
+        C_Item.RequestLoadItemDataByID(itemID)
+    end
+
+    local targetLevel = addonTable.GetMaxItemLevel(slotID, itemKind == "crafted", slotName)
+    -- Apply the exact target-level adjustment to all planner links. Source or
+    -- recipe modifiers alone can leave the tooltip at its base item level.
+    local levelBonusID = GetItemLevelBonusID(targetLevel and HasBaseItemLevel(baseItemLevel)
+        and targetLevel - baseItemLevel)
+    if levelBonusID then bonusIDs[#bonusIDs + 1] = levelBonusID end
+
+    local getInstant = C_Item and C_Item.GetItemInfoInstant or GetItemInfoInstant
+    local equipLocation = getInstant and select(4, getInstant(itemID))
+    if equipLocation == "INVTYPE_FINGER" or equipLocation == "INVTYPE_NECK" then
+        AddBonusID(bonusIDs, linkBonuses.ringNeck)
+    end
+    AddBonusID(bonusIDs, linkBonuses.epic)
 
     if #bonusIDs == 0 then return "item:" .. tostring(itemID) end
     local playerLevel = UnitLevel and UnitLevel("player") or 0
@@ -824,12 +906,7 @@ local function IsCatalystSlot(entry)
 end
 
 local function GetGuideSlotID(entry)
-    local slot = string.lower(tostring(entry and entry.slot or ""))
-    if slot == "head" or slot == "helm" then return 0 end
-    if slot == "shoulder" or slot == "shoulders" then return 2 end
-    if slot == "chest" then return 4 end
-    if slot == "hands" or slot == "gloves" then return 7 end
-    if slot == "legs" then return 8 end
+    return GetCatalystSlotID(entry)
 end
 
 local function SourceTextMatches(sourceText, source)
@@ -1019,6 +1096,16 @@ local function BuildDesiredSet(pool, plan, targetSpecID, source, classID, lootSp
     for itemID in pairs(GetTierTokenDesiredSet(pool, plan, source)) do
         desired[itemID] = true
     end
+    -- A custom item replaces its specific guide target. Keeping the pair
+    -- preserves the second legitimate ring/trinket position while preventing
+    -- a guide refresh from restoring the superseded recommendation.
+    local customItems = addonTable.DB.customBISItems[targetSpecID] or {}
+    for customItemKey, replacement in pairs(customItems) do
+        local customItemID = tonumber(customItemKey)
+        local replacedItemID = type(replacement) == "table" and tonumber(replacement.replacedItemID) or nil
+        if replacedItemID and pool[replacedItemID] then desired[replacedItemID] = nil end
+        if customItemID and pool[customItemID] then desired[customItemID] = true end
+    end
     local overrides = addonTable.DB.bisOverrides[targetSpecID] or {}
     for itemID in pairs(pool) do
         local override = overrides[tostring(itemID)]
@@ -1140,14 +1227,44 @@ local function GetSourceStats(source, plan, classID, lootSpecID, targetSpecID)
     }
 end
 
+local function FindGuideItemForSlot(plan, slotID)
+    local list = plan and plan.bis and (plan.bis[plan.mode] or plan.bis.overall) or {}
+    if addonTable.DB.source == "wowhead" and plan and plan.mode == "overall"
+        and plan.bis and plan.bis.wowheadOverall and #plan.bis.wowheadOverall > 0 then
+        list = plan.bis.wowheadOverall
+    end
+    for _, entry in ipairs(list) do
+        local itemID = type(entry) == "table" and entry.itemID or entry
+        local itemInfo = itemID and GetLootItemInfo(itemID)
+        if itemID and GetDisplaySlotID(itemID, itemInfo and itemInfo.slotId) == slotID then
+            return itemID
+        end
+    end
+    for _, target in ipairs(plan and plan.catalyst and plan.catalyst.targets or {}) do
+        if GetCatalystSlotID(target) == slotID then return target.itemID end
+    end
+end
+
 local function AddSourceItems(stats, targetSpecID)
     local items = {}
+    local customItems = addonTable.DB.customBISItems[targetSpecID] or {}
+    local guideItemsBySlot = {}
+    for itemID in pairs(stats.desired) do
+        if not customItems[tostring(itemID)] then
+            local itemInfo = GetLootItemInfo(itemID)
+            local tierToken = GetTierTokenInfo(stats.source, itemID)
+            local slotID = tierToken and tierToken.slotID
+                or GetDisplaySlotID(itemID, itemInfo and itemInfo.slotId)
+            if slotID and not guideItemsBySlot[slotID] then guideItemsBySlot[slotID] = itemID end
+        end
+    end
     for itemID in pairs(stats.pool) do
         local itemInfo = GetLootItemInfo(itemID)
         local tierToken = GetTierTokenInfo(stats.source, itemID)
         local slotID = tierToken and tierToken.slotID
             or GetDisplaySlotID(itemID, itemInfo and itemInfo.slotId)
         local isTierToken = tierToken ~= nil
+        local customItem = customItems[tostring(itemID)]
         table.insert(items, {
             itemID = itemID,
             name = GetItemName(itemID),
@@ -1155,8 +1272,8 @@ local function AddSourceItems(stats, targetSpecID)
             slotID = slotID,
             slotLabel = tierToken and tierToken.slotLabel,
             isBIS = stats.desired[itemID] == true,
-            isManualBIS = addonTable.DB.bisOverrides[targetSpecID]
-                and addonTable.DB.bisOverrides[targetSpecID][tostring(itemID)] == true or false,
+            isManualBIS = customItem ~= nil,
+            guideItemID = guideItemsBySlot[slotID] or FindGuideItemForSlot(stats.plan, slotID),
             isCatalyst = stats.catalyst[itemID] == true,
             isTierToken = isTierToken,
             isWon = IsItemWon(itemID),
@@ -1341,10 +1458,37 @@ function addonTable.SetLootSpec(specID)
     if addonTable.Refresh then addonTable.Refresh() end
 end
 
-function addonTable.SetBISOverride(specID, itemID, isBIS)
+function addonTable.SetBISOverride(specID, itemID, isBIS, slotID, replacedItemID)
     if not specID or not itemID then return end
     addonTable.DB.bisOverrides[specID] = addonTable.DB.bisOverrides[specID] or {}
-    addonTable.DB.bisOverrides[specID][tostring(itemID)] = isBIS == true
+    local overrides = addonTable.DB.bisOverrides[specID]
+    if slotID ~= nil then
+        addonTable.DB.customBISItems[specID] = addonTable.DB.customBISItems[specID] or {}
+        local customItems = addonTable.DB.customBISItems[specID]
+        local inheritedReplacement
+        if isBIS then
+            for existingItemID, replacement in pairs(customItems) do
+                if type(replacement) == "table" and tonumber(replacement.slotID) == slotID then
+                    inheritedReplacement = inheritedReplacement or tonumber(replacement.replacedItemID)
+                    customItems[existingItemID] = nil
+                    overrides[existingItemID] = nil
+                end
+            end
+            customItems[tostring(itemID)] = {
+                slotID = slotID,
+                replacedItemID = replacedItemID or inheritedReplacement,
+            }
+            overrides[tostring(itemID)] = nil
+        elseif customItems[tostring(itemID)] then
+            -- Restoring the guide target removes this replacement pair.
+            customItems[tostring(itemID)] = nil
+            overrides[tostring(itemID)] = nil
+        else
+            overrides[tostring(itemID)] = false
+        end
+    else
+        overrides[tostring(itemID)] = isBIS == true
+    end
     sourceRecommendationCache = {}
     if addonTable.Refresh then addonTable.Refresh() end
 end
@@ -1381,10 +1525,15 @@ eventFrame:SetScript("OnEvent", function(_, event, ...)
         if addonTable.Refresh then addonTable.Refresh() end
     elseif event == "ACTIVE_TALENT_GROUP_CHANGED" or event == "PLAYER_SPECIALIZATION_CHANGED" then
         local currentClassID, currentSpecID = addonTable.GetCurrentSpec()
-        addonTable.CharDB.followCurrentSpec = true
-        addonTable.CharDB.selectedClassID = currentClassID
-        addonTable.CharDB.selectedSpecID = currentSpecID
-        addonTable.CharDB.lootSpecID = currentSpecID
+        -- A manual class/spec selection is a browsing preference. Do not
+        -- overwrite it because the player's own specialization changes or
+        -- the client emits a late specialization event while the planner is
+        -- open. Only the untouched, default selection follows the character.
+        if addonTable.CharDB.followCurrentSpec ~= false then
+            addonTable.CharDB.selectedClassID = currentClassID
+            addonTable.CharDB.selectedSpecID = currentSpecID
+            addonTable.CharDB.lootSpecID = currentSpecID
+        end
         if addonTable.Refresh then addonTable.Refresh() end
     elseif addonTable.Refresh then
         addonTable.Refresh()

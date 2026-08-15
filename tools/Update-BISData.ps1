@@ -199,7 +199,7 @@ function Get-IcyCatalystTargets([string] $html) {
             source = (Strip-Html $sourceMatch.Groups[1].Value)
         }
     }
-    return @($targets | Sort-Object itemID, source -Unique)
+    return @($targets)
 }
 
 function Get-GuideCatalystSlotID([string] $slot) {
@@ -211,6 +211,33 @@ function Get-GuideCatalystSlotID([string] $slot) {
         '^Legs$' { return 8 }
     }
     return $null
+}
+
+function Select-PrimaryCatalystTargets([object[]] $targets) {
+    # Keep the first explicit guide recommendation for each tier slot. Earlier
+    # parser paths are more direct than later fallback paths, so merging every
+    # match could incorrectly produce two different catalyst pants (or any
+    # other tier slot) for the same spec.
+    $selected = @{}
+    $ordered = [System.Collections.Generic.List[object]]::new()
+    foreach ($target in @($targets)) {
+        if (-not $target) { continue }
+        $slotID = Get-GuideCatalystSlotID $target.slot
+        if ($null -eq $slotID) { continue }
+        if (-not $selected.ContainsKey($slotID)) {
+            $selected[$slotID] = $ordered.Count
+            [void]$ordered.Add($target)
+            continue
+        }
+        # A non-empty name indicates an explicit guide reference. Replace an
+        # earlier nameless catalog fallback for the same tier slot.
+        $existingIndex = $selected[$slotID]
+        $existing = $ordered[$existingIndex]
+        if ([string]::IsNullOrWhiteSpace($existing.name) -and -not [string]::IsNullOrWhiteSpace($target.name)) {
+            $ordered[$existingIndex] = $target
+        }
+    }
+    return @($ordered)
 }
 
 function Find-IcyItemIDByName([string] $html, [string] $name) {
@@ -647,19 +674,304 @@ function Get-StatPriority([string] $html) {
     return ($stats -join " > ")
 }
 
-function Get-WowheadOverall([string] $html) {
-    $start = $html.IndexOf('[tab name=\"Overall BiS\"')
-    if ($start -lt 0) { $start = $html.IndexOf('[tab name="Overall BiS"') }
-    if ($start -lt 0) { return @() }
-    $end = $html.IndexOf('[/tab]', $start)
-    if ($end -lt 0) { $end = $html.Length }
-    $section = $html.Substring($start, $end - $start)
-    $ids = @()
-    foreach ($match in [regex]::Matches($section, '\[item=(\d+)')) {
-        $id = [int] $match.Groups[1].Value
-        if ($ids -notcontains $id) { $ids += $id }
+function Get-IcyCraftedRecommendations([string] $html, [object[]] $craftedItems) {
+    $byItemID = @{}
+    if (-not $html) {
+        return [pscustomobject]@{ byItemID = $byItemID; generic = "" }
     }
-    return $ids
+
+    $craftedIDs = @{}
+    foreach ($item in @($craftedItems)) { $craftedIDs[[int]$item.itemID] = $true }
+    # The heading has changed between authors and specs (for example
+    # "Crafted Gear and Embellishments" and "Progression based Crafted
+    # Items").  The first H2 that explicitly discusses crafted gear is the
+    # complete scope for this extractor; do not depend on one exact title.
+    $heading = $null
+    foreach ($candidate in [regex]::Matches($html, '(?is)<h2\b[^>]*>.*?</h2>')) {
+        if ((Strip-Html $candidate.Value) -match '(?i)\bcrafted\b') {
+            $heading = $candidate
+            break
+        }
+    }
+    # Frost/Unholy DK currently place this guidance under an H3 without a
+    # preceding crafted H2.  That is still an explicit author recommendation
+    # and is safer than silently shipping an empty embellishment field.
+    if (-not $heading) {
+        foreach ($candidate in [regex]::Matches($html, '(?is)<h[23]\b[^>]*>.*?</h[23]>')) {
+            if ((Strip-Html $candidate.Value) -match '(?i)\bbest\s+embellishments?\b') {
+                $heading = $candidate
+                break
+            }
+        }
+    }
+    if (-not $heading.Success) {
+        return [pscustomobject]@{ byItemID = $byItemID; generic = "" }
+    }
+    $isDedicatedEmbellishmentSection = (Strip-Html $heading.Value) -match '(?i)\bbest\s+embellishments?\b'
+    $tail = $html.Substring($heading.Index + $heading.Length)
+    $headingLevel = [regex]::Match($heading.Value, '(?is)^<h(?<level>[23])\b').Groups['level'].Value
+    $nextHeadingPattern = if ($headingLevel -eq '3') { '(?is)<h[123]\b' } else { '(?is)<h2\b' }
+    $nextHeading = [regex]::Match($tail, $nextHeadingPattern)
+    $section = if ($nextHeading.Success) { $tail.Substring(0, $nextHeading.Index) } else { $tail }
+
+    # Icy Veins uses more than one layout for this guidance.  Some guides put
+    # an explicit "with <embellishment>" line straight under Best Crafted
+    # Items, others use a Crafted Priority fieldset, and others have a
+    # dedicated Embellishments fieldset.  Restrict candidates to rare optional
+    # reagents (q3) inside those explicit recommendation rows.  This avoids
+    # mistaking the guide's crafted gear, gems, or alternative gear links for
+    # embellishments.
+    $linkPattern = 'data-wowhead="item=(?<id>\d+)[^"]*"[^>]*class="q(?<quality>\d+)"[^>]*>\s*(?<name>[^<]+?)\s*</span>'
+    $priorityCandidates = @()
+    $embellishmentCandidates = @()
+    $inlineCandidates = @()
+    $contextCandidates = @()
+
+    function Get-EmbellishmentLinks([string] $body) {
+        $links = @()
+        foreach ($match in [regex]::Matches($body, $linkPattern)) {
+            if ([int]$match.Groups['quality'].Value -ne 3) { continue }
+            $name = Strip-Html $match.Groups['name'].Value
+            if (-not $name) { continue }
+            $links += [pscustomobject]@{
+                itemID = [int]$match.Groups['id'].Value
+                name = $name
+                index = $match.Index
+            }
+        }
+        return @($links)
+    }
+
+    function Add-UniqueName([System.Collections.ArrayList] $list, [string] $name) {
+        if ($name -and -not $list.Contains($name)) { [void]$list.Add($name) }
+    }
+
+    $priorityCandidates = [System.Collections.ArrayList]@()
+    $embellishmentCandidates = [System.Collections.ArrayList]@()
+    $inlineCandidates = [System.Collections.ArrayList]@()
+    $contextCandidates = [System.Collections.ArrayList]@()
+
+    foreach ($fieldset in [regex]::Matches($section, '(?is)<fieldset\b[^>]*>.*?</fieldset>')) {
+        $fieldsetHtml = $fieldset.Value
+        $fieldsetText = Strip-Html $fieldsetHtml
+        $isCraftedPriority = $fieldsetText -match '(?i)craft(?:ed|ing).{0,40}(?:priority|order)'
+        $isEmbellishmentPriority = $fieldsetText -match '(?i)embellishment'
+        if (-not $isCraftedPriority -and -not $isEmbellishmentPriority) { continue }
+
+        $rows = @([regex]::Matches($fieldsetHtml, '(?is)<li\b[^>]*>(?<body>.*?)</li>'))
+        if ($rows.Count -eq 0) {
+            # Several guides place each priority row directly in a fieldset
+            # and separate them with <br>; process those as independent rows
+            # so a weapon's embellishment cannot leak onto armor pieces.
+            $rows = @([regex]::Matches($fieldsetHtml, '(?is)(?<body>.*?)(?:<br\s*/?>|$)'))
+        }
+        foreach ($row in $rows) {
+            $body = $row.Groups['body'].Value
+            $text = Strip-Html $body
+            $allLinks = @([regex]::Matches($body, $linkPattern))
+            $craftsInRow = @()
+            foreach ($link in $allLinks) {
+                $itemID = [int]$link.Groups['id'].Value
+                if ($craftedIDs.ContainsKey($itemID)) { $craftsInRow += $itemID }
+            }
+            $candidates = @(Get-EmbellishmentLinks $body)
+            if ($candidates.Count -eq 0) { continue }
+
+            foreach ($candidate in $candidates) {
+                # A "with" row can name both the crafted item and its
+                # reagent.  Apply that reagent to every listed crafted item;
+                # BM Hunter is the common case with two armor pieces.
+                if ($craftsInRow.Count -gt 0 -and $text -match '(?i)\bwith\b') {
+                    foreach ($craftedID in $craftsInRow) { $byItemID[$craftedID] = $candidate.name }
+                }
+
+                # Crafted-priority instructions are the guide's preferred
+                # default.  Do not promote a weapon-only optional line unless
+                # it applies to one of this spec's actual crafted BiS items.
+                if ($isCraftedPriority) {
+                    $isGeneralSlotInstruction = $text -match '(?i)\bany\s+(?:low|slot)|\bany\s+slot\b'
+                    if ($craftsInRow.Count -gt 0 -or $isGeneralSlotInstruction) {
+                        Add-UniqueName $priorityCandidates $candidate.name
+                    }
+                } elseif ($isEmbellishmentPriority) {
+                    Add-UniqueName $embellishmentCandidates $candidate.name
+                }
+            }
+        }
+    }
+
+    # Some guides (for example Beast Mastery Hunter) use a plain ordered list
+    # instead of a fieldset.  Only inspect rows which explicitly connect a
+    # crafted BiS item to a reagent with "with".
+    foreach ($row in [regex]::Matches($section, '(?is)<(?:li|p)\b[^>]*>(?<body>.*?)</(?:li|p)>')) {
+        $body = $row.Groups['body'].Value
+        $text = Strip-Html $body
+        $allLinks = @([regex]::Matches($body, $linkPattern))
+        $craftsInRow = @()
+        foreach ($link in $allLinks) {
+            $itemID = [int]$link.Groups['id'].Value
+            if ($craftedIDs.ContainsKey($itemID)) { $craftsInRow += $itemID }
+        }
+        $candidates = @(Get-EmbellishmentLinks $body)
+        if ($candidates.Count -eq 0) { continue }
+
+        if ($craftsInRow.Count -gt 0 -and $text -match '(?i)\bwith\b') {
+            foreach ($candidate in $candidates) {
+                foreach ($craftedID in $craftsInRow) { $byItemID[$craftedID] = $candidate.name }
+                Add-UniqueName $inlineCandidates $candidate.name
+            }
+        }
+
+        # A number of guides describe the long-term choice in prose rather
+        # than a list.  Score only explicit embellishment wording so sockets,
+        # gems, and profession convenience effects do not become a player
+        # recommendation.  This is a fallback below the structured priority
+        # data, not a replacement for it.
+        if (-not $isDedicatedEmbellishmentSection -and $text -notmatch '(?i)embellish|embelish|\bwith\b|\battach\b') { continue }
+        foreach ($candidate in $candidates) {
+            $score = if ($isDedicatedEmbellishmentSection) { 100 } else { 0 }
+            $escapedName = [regex]::Escape($candidate.name)
+            if ($text -match "(?i)\b(?:best|default|recommended|recommend)\b.{0,80}$escapedName|$escapedName.{0,80}\b(?:best|default|recommended|recommend)\b") { $score += 80 }
+            if ($text -match '(?i)\bbest\s+(?:general|overall|long.?term).{0,80}\bembellish') { $score += 80 }
+            if ($text -match '(?i)\bwith\b') { $score += 25 }
+            if ($text -match '(?i)\b(?:attach|second)\b.{0,50}\bembellish') { $score += 25 }
+            if ($text -match '(?i)\bnot\s+worth\b|\bremove\s+this\s+effect\b|\bquality\s+of\s+life\b|\boutdoor\s+content\b') { $score -= 100 }
+            if ($score -gt 0) {
+                [void]$contextCandidates.Add([pscustomobject]@{
+                    name = $candidate.name
+                    score = $score
+                    index = $row.Index + $candidate.index
+                })
+            }
+        }
+    }
+
+    # Preference order mirrors the author guidance: a crafted-priority
+    # instruction wins, then a dedicated embellishment list, then inline
+    # crafted-item guidance.  The UI removes weapon-only entries where this
+    # spec has no crafted weapon.
+    $generic = if ($priorityCandidates.Count -gt 0) {
+        @($priorityCandidates)
+    } elseif ($embellishmentCandidates.Count -gt 0) {
+        @($embellishmentCandidates)
+    } else {
+        if ($inlineCandidates.Count -gt 0) {
+            @($inlineCandidates)
+        } else {
+            $contextCandidates |
+                Sort-Object @{ Expression = 'score'; Descending = $true }, @{ Expression = 'index'; Descending = $false } |
+                ForEach-Object { $_.name } |
+                Select-Object -Unique
+        }
+    }
+
+    return [pscustomobject]@{
+        byItemID = $byItemID
+        generic = $generic -join " + "
+    }
+}
+
+function Get-WowheadOverall([string] $html) {
+    $tabs = @([regex]::Matches($html, '(?is)\[tab\s+name=\\?"(?<name>[^"]+)"'))
+    if ($tabs.Count -eq 0) { throw "Wowhead BiS tab was not found" }
+    $selectedTab = @($tabs | Where-Object { $_.Groups['name'].Value -match '(?i)overall' } | Select-Object -First 1)
+    if ($selectedTab.Count -eq 0) { $selectedTab = @($tabs | Select-Object -First 1) }
+    $start = $selectedTab[0].Index
+    $nextTab = @($tabs | Where-Object { $_.Index -gt $start } | Select-Object -First 1)
+    $end = if ($nextTab.Count -gt 0) { $nextTab[0].Index } else { $html.Length }
+    $section = $html.Substring($start, $end - $start)
+
+    $bestItems = @()
+    foreach ($table in [regex]::Matches($section, '(?is)\[table\b[^\]]*\](?<body>.*?)\[\\?/table\]')) {
+        $items = @()
+        foreach ($row in [regex]::Matches($table.Groups['body'].Value, '(?is)\[tr[^\]]*\](?<body>.*?)\[\\?/tr\]')) {
+            $cells = @([regex]::Matches($row.Groups['body'].Value, '(?is)\[td[^\]]*\](?<body>.*?)\[\\?/td\]'))
+            if ($cells.Count -lt 2) { continue }
+            $slot = Strip-Html ($cells[0].Groups['body'].Value -replace '\[[^\]]+\]', ' ')
+            $itemMatch = $null
+            foreach ($cell in @($cells | Select-Object -Skip 1)) {
+                $candidate = [regex]::Match($cell.Groups['body'].Value, '\[item=(?<id>\d+)(?:\s+original-item=(?<original>\d+))?')
+                if ($candidate.Success) { $itemMatch = $candidate; break }
+            }
+            if (-not $itemMatch.Success -or -not $slot -or $slot -match '(?i)^(item\s+)?slot$') { continue }
+            # A catalyst result is displayed as tier gear by Wowhead but the
+            # original item is the actual bonus-roll candidate. Retain that
+            # base item for the finite-pool calculation.
+            $itemID = if ($itemMatch.Groups['original'].Success) { [int]$itemMatch.Groups['original'].Value } else { [int]$itemMatch.Groups['id'].Value }
+            $items += [pscustomobject]@{ itemID = $itemID; slot = $slot }
+        }
+        if ($items.Count -gt $bestItems.Count) { $bestItems = $items }
+    }
+    if ($bestItems.Count -eq 0) { throw "Wowhead BiS gear table was not found in '$($selectedTab[0].Groups['name'].Value)'" }
+
+    # Several guides include situational alternates in their table. Keep the
+    # first explicit recommendation for a single-slot position and the first
+    # two for rings/trinkets: that is the complete equipped plan this addon
+    # validates against, rather than treating alternates as duplicate gear.
+    $capacity = @{ Head = 1; Neck = 1; Shoulders = 1; Cloak = 1; Chest = 1; Bracers = 1; Hands = 1; Waist = 1; Legs = 1; Feet = 1; Ring = 2; Trinket = 2; 'Main Hand' = 1; 'Off Hand' = 1 }
+    $counts = @{}
+    $selected = @()
+    foreach ($item in $bestItems) {
+        $slot = Get-BISSlotKey $item.slot
+        if (-not $capacity.ContainsKey($slot)) { throw "Wowhead BiS table has an unrecognized slot '$($item.slot)'" }
+        $count = if ($counts.ContainsKey($slot)) { [int]$counts[$slot] } else { 0 }
+        if ($count -lt $capacity[$slot]) {
+            $counts[$slot] = $count + 1
+            $selected += [pscustomobject]@{ itemID = $item.itemID; slot = $slot }
+        }
+    }
+    return @($selected)
+}
+
+function Get-BISSlotKey([string] $slot) {
+    $value = if ($slot) { $slot.Trim().ToLowerInvariant() } else { "" }
+    switch -Regex ($value) {
+        '^(head|helm)' { return 'Head' }
+        '^neck' { return 'Neck' }
+        '^shoulder' { return 'Shoulders' }
+        '^(back|cloak|cape)' { return 'Cloak' }
+        '^chest' { return 'Chest' }
+        '^(wrist|bracer)' { return 'Bracers' }
+        '^(hand|glove)' { return 'Hands' }
+        '^(waist|belt)' { return 'Waist' }
+        '^leg' { return 'Legs' }
+        '^(feet|boot)' { return 'Feet' }
+        '^ring' { return 'Ring' }
+        '^trinket' { return 'Trinket' }
+        '^(off[ -]?hand|shield)' { return 'Off Hand' }
+        '^(main[ -]?hand|one[ -]?hand|two[ -]?hand|1h|2h|weapon)' { return 'Main Hand' }
+        default { return $slot }
+    }
+}
+
+function Assert-BISSlotCoverage([object[]] $items, [string] $label) {
+    $required = [ordered]@{
+        Head = 1; Neck = 1; Shoulders = 1; Cloak = 1; Chest = 1; Bracers = 1
+        Hands = 1; Waist = 1; Legs = 1; Feet = 1; Ring = 2; Trinket = 2
+    }
+    $counts = @{}
+    foreach ($item in @($items)) {
+        $slot = Get-BISSlotKey $item.slot
+        if (-not $required.Contains($slot) -and $slot -notin @('Main Hand', 'Off Hand')) {
+            throw "$label has an unrecognized BIS slot '$($item.slot)'"
+        }
+        $currentCount = if ($counts.ContainsKey($slot)) { [int]$counts[$slot] } else { 0 }
+        $counts[$slot] = $currentCount + 1
+    }
+    foreach ($slot in $required.Keys) {
+        $count = if ($counts.ContainsKey($slot)) { [int]$counts[$slot] } else { 0 }
+        if ($count -ne $required[$slot]) {
+            throw "$label must have exactly $($required[$slot]) $slot recommendation(s); found $count"
+        }
+    }
+    $mainHandCount = if ($counts.ContainsKey('Main Hand')) { [int]$counts['Main Hand'] } else { 0 }
+    if ($mainHandCount -ne 1) {
+        throw "$label must have exactly one Main Hand recommendation; found $mainHandCount"
+    }
+    $offHandCount = if ($counts.ContainsKey('Off Hand')) { [int]$counts['Off Hand'] } else { 0 }
+    if ($offHandCount -gt 1) {
+        throw "$label has multiple Off Hand recommendations"
+    }
 }
 
 function Get-WowheadCatalystRequirements([string] $html, [object] $catalog) {
@@ -754,7 +1066,23 @@ foreach ($spec in $specs) {
         $raids = @(Get-IcyItems $(if ($raidsPanel) { $raidsPanel } else { Get-Section $gear @("best-raid-gear", "raid-gear-bis-list", "raid-gear-best-in-slot") }))
         $dungeons = @(Get-IcyItems $(if ($dungeonsPanel) { $dungeonsPanel } else { Get-Section $gear @("best-mythic-gear", "mythic-gear-bis-list", "mythic-gear-best-in-slot") }))
         if ($overall.Count -eq 0) { throw "Icy Veins overall list was empty" }
+        $wowheadOverall = @(Get-WowheadOverall $wowhead)
+        Assert-BISSlotCoverage $overall "$($spec.specName) $($spec.className) Icy Veins overall"
+        Assert-BISSlotCoverage $wowheadOverall "$($spec.specName) $($spec.className) Wowhead overall"
         $crafted = @($overall | Where-Object { $_.source -match '(?i)crafted|blacksmithing|leatherworking|tailoring|engineering|jewelcrafting|inscription' } | Select-Object itemID, slot, name, source)
+        $craftedRecommendations = Get-IcyCraftedRecommendations $gear $crafted
+        if (-not $craftedRecommendations.generic) {
+            throw "Icy Veins embellishment recommendation was not found"
+        }
+        $crafted = @($crafted | ForEach-Object {
+            [pscustomobject]@{
+                itemID = $_.itemID
+                slot = $_.slot
+                name = $_.name
+                source = $_.source
+                embellishment = $craftedRecommendations.byItemID[[int]$_.itemID]
+            }
+        })
         $faqTargets = Get-GuideFAQCatalystTargets $gear $lootCatalog $spec.id
         $overallPanelTargets = Get-PanelCatalystTargets $overallPanel $lootCatalog $spec.id
         $raidPanelTargets = Get-PanelCatalystTargets $raidsPanel $lootCatalog $spec.id
@@ -773,43 +1101,31 @@ foreach ($spec in $specs) {
         if ($unresolved.Count -gt 0) {
             throw ("Unresolved catalyst target(s): " + ($unresolved -join "; "))
         }
-        $faqCatalyst = @(
+        $faqCatalyst = @(Select-PrimaryCatalystTargets @(
             (Get-IcyCatalystTargets $gear) +
             $faqTargets.targets +
             $overallPanelTargets.targets +
             $wowheadCatalystTargets.targets
             | Where-Object { $_.itemID -and $_.source }
-            | Sort-Object itemID, source -Unique
-        )
-        $raidFaqCatalyst = @(
-            $faqCatalyst + $raidPanelTargets.targets |
-            Where-Object { IsRaidCatalogSource $_.source } |
-            Sort-Object itemID, source -Unique
-        )
-        $dungeonFaqCatalyst = @(
-            $faqCatalyst + $dungeonPanelTargets.targets |
-            Where-Object { -not (IsRaidCatalogSource $_.source) } |
-            Sort-Object itemID, source -Unique
-        )
+        ))
+        $raidFaqCatalyst = @(Select-PrimaryCatalystTargets @(
+            ($faqCatalyst + $raidPanelTargets.targets) |
+            Where-Object { IsRaidCatalogSource $_.source }
+        ))
+        $dungeonFaqCatalyst = @(Select-PrimaryCatalystTargets @(
+            ($faqCatalyst + $dungeonPanelTargets.targets) |
+            Where-Object { -not (IsRaidCatalogSource $_.source) }
+        ))
         $cardOverallCatalyst = @(Get-CardCatalystTargets $overall $lootCatalog $spec.id)
         $cardRaidCatalyst = @(Get-CardCatalystTargets $raids $lootCatalog $spec.id)
         $cardDungeonCatalyst = @(Get-CardCatalystTargets $dungeons $lootCatalog $spec.id)
         $catalyst = [pscustomobject]@{
-            overall = @(
-                $faqCatalyst + $cardOverallCatalyst
-                | Sort-Object itemID, source -Unique
-            )
-            raids = @(
-                $raidFaqCatalyst + $cardRaidCatalyst
-                | Sort-Object itemID, source -Unique
-            )
-            dungeons = @(
-                $dungeonFaqCatalyst + $cardDungeonCatalyst
-                | Sort-Object itemID, source -Unique
-            )
+            overall = @(Select-PrimaryCatalystTargets @($faqCatalyst + $cardOverallCatalyst))
+            raids = @(Select-PrimaryCatalystTargets @($raidFaqCatalyst + $cardRaidCatalyst))
+            dungeons = @(Select-PrimaryCatalystTargets @($dungeonFaqCatalyst + $cardDungeonCatalyst))
         }
         foreach ($mode in @("overall", "raids", "dungeons")) {
-            $catalyst.$mode = @(
+            $eligibleCatalystTargets = @(
                 $catalyst.$mode |
                 Where-Object { -not $lootCatalog.excludedItemIDs.ContainsKey([int]$_.itemID) } |
                 ForEach-Object {
@@ -820,9 +1136,9 @@ foreach ($spec in $specs) {
                         source = $_.source
                         tierToken = $_.tierToken -or $lootCatalog.tierTokenIDs.ContainsKey([int]$_.itemID)
                     }
-                } |
-                Sort-Object itemID, source -Unique
+                }
             )
+            $catalyst.$mode = @(Select-PrimaryCatalystTargets $eligibleCatalystTargets)
         }
         Assert-CatalystTargets $catalyst.overall $lootCatalog $spec.id "$($spec.specName) $($spec.className) overall"
         Assert-CatalystTargets $catalyst.raids $lootCatalog $spec.id "$($spec.specName) $($spec.className) raids"
@@ -838,8 +1154,9 @@ foreach ($spec in $specs) {
             raids = $raids
             dungeons = $dungeons
             crafted = $crafted
+            craftedEmbellishment = $craftedRecommendations.generic
             catalyst = $catalyst
-            wowheadOverall = @(Get-WowheadOverall $wowhead)
+            wowheadOverall = @($wowheadOverall | ForEach-Object { [int]$_.itemID })
         }
     } catch {
         $failed += "$($spec.id): $($_.Exception.Message)"
@@ -866,6 +1183,9 @@ foreach ($record in ($records | Sort-Object id)) {
     $lines.Add("        statURL = `"$(Escape-Lua $record.statURL)`",")
     $lines.Add("        icyVeinsURL = `"$(Escape-Lua $record.icyVeinsURL)`",")
     $lines.Add("        wowheadURL = `"$(Escape-Lua $record.wowheadURL)`",")
+    if ($record.craftedEmbellishment) {
+        $lines.Add("        craftedEmbellishment = `"$(Escape-Lua $record.craftedEmbellishment)`",")
+    }
     foreach ($mode in @("overall", "raids", "dungeons")) {
         $lines.Add("        $mode = {")
         foreach ($item in ($record.$mode | Sort-Object itemID -Unique)) {
@@ -875,13 +1195,14 @@ foreach ($record in ($records | Sort-Object id)) {
     }
     $lines.Add("        crafted = {")
     foreach ($item in ($record.crafted | Sort-Object itemID -Unique)) {
-        $lines.Add("            { itemID = $($item.itemID), slot = `"$(Escape-Lua $item.slot)`", name = `"$(Escape-Lua $item.name)`", source = `"$(Escape-Lua $item.source)`" },")
+        $embellishment = if ($item.embellishment) { ", embellishment = `"$(Escape-Lua $item.embellishment)`"" } else { "" }
+        $lines.Add("            { itemID = $($item.itemID), slot = `"$(Escape-Lua $item.slot)`", name = `"$(Escape-Lua $item.name)`", source = `"$(Escape-Lua $item.source)`"$embellishment },")
     }
     $lines.Add("        },")
     $lines.Add("        catalyst = {")
     foreach ($mode in @("overall", "raids", "dungeons")) {
         $lines.Add("            $mode = {")
-        foreach ($item in ($record.catalyst.$mode | Where-Object { $_.itemID -and $_.source } | Sort-Object itemID, source -Unique)) {
+        foreach ($item in ($record.catalyst.$mode | Where-Object { $_.itemID -and $_.source })) {
             $tierToken = if ($item.tierToken) { ", tierToken = true" } else { "" }
             $lines.Add("                { itemID = $($item.itemID), slot = `"$(Escape-Lua $item.slot)`", name = `"$(Escape-Lua $item.name)`", source = `"$(Escape-Lua $item.source)`"$tierToken },")
         }
