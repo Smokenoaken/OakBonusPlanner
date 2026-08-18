@@ -39,7 +39,7 @@ addonTable.Patreons = {
     "Tenelle Mallard",
     "coot",
     "Edwin Cridland",
-    "stephiemarie78",
+    "Robert D Jones",
     "Edrick Nickerson",
     "B 87",
     "Nalu Rider",
@@ -90,4 +90,5 @@ addonTable.Patreons = {
     "evans starzinger",
     "JimmyJam",
     "Mack",
+    "Jennifer Carlson",
 }

@@ -1,3 +1,9 @@
+## v0.5.3
+
+- Enabled the optional Great Vault BIS advisor by default while retaining its Options opt-out.
+- Fixed the Weekly Vault BIS-star font initialization error that prevented Vault markers from rendering.
+- Refreshed the active paid Patreon supporter list.
+
 ## v0.5.2
 
 - Fixed Nebulous Voidcore tracking to read Blizzard's live Voidcore currency instead of an unrelated currency.
