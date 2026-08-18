@@ -25,9 +25,9 @@ local function EnsureItemMarker(itemFrame)
     if itemFrame.OakBonusPlannerBISMarker then return itemFrame.OakBonusPlannerBISMarker end
     local marker = itemFrame:CreateFontString(nil, "OVERLAY")
     marker:SetPoint("TOPRIGHT", itemFrame, "TOPRIGHT", 6, 6)
+    addonTable.ApplyFont(marker, "large")
     marker:SetText("★")
     marker:SetTextColor(1, 0.82, 0, 1)
-    addonTable.ApplyFont(marker, "large")
     marker:Hide()
     itemFrame.OakBonusPlannerBISMarker = marker
 
