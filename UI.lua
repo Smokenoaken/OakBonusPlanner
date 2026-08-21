@@ -9,13 +9,20 @@ local CLASSIC_ROW_B = { 0.105, 0.105, 0.105, 0.94 }
 local MIN_WINDOW_WIDTH = 660
 local MIN_WINDOW_HEIGHT = 470
 
-local panel = CreateFrame("Frame", "OakBonusPlannerFrame", UIParent, "ButtonFrameTemplate")
+local panel = CreateFrame("Frame", "OakBonusPlannerFrame", UIParent, "PortraitFrameTemplate")
 addonTable.Frame = panel
 local savedSize = addonTable.DB.size
 savedSize.width = math.max(MIN_WINDOW_WIDTH, tonumber(savedSize.width) or MIN_WINDOW_WIDTH)
 savedSize.height = math.max(MIN_WINDOW_HEIGHT, tonumber(savedSize.height) or 620)
 panel:SetSize(savedSize.width, savedSize.height)
 panel:SetFrameStrata("DIALOG")
+panel:SetToplevel(true)
+panel:HookScript("OnMouseDown", function(self)
+    self:Raise()
+end)
+if panel.SetClipsChildren then
+    panel:SetClipsChildren(false)
+end
 panel:SetClampedToScreen(true)
 panel:SetMovable(true)
 panel:SetResizable(true)
@@ -27,7 +34,9 @@ else
 end
 panel:EnableMouse(true)
 panel:RegisterForDrag("LeftButton")
-if ButtonFrameTemplate_HidePortrait then ButtonFrameTemplate_HidePortrait(panel) end
+if panel.PortraitContainer and panel.PortraitContainer.portrait then
+    panel.PortraitContainer.portrait:SetTexture("Interface\\AddOns\\OakBonusPlanner\\Media\\logo.png")
+end
 if panel.Bg then panel.Bg:SetAlpha(1) end
 if panel.TopTileStreaks then panel.TopTileStreaks:Hide() end
 if panel.SetTitle then
@@ -70,17 +79,10 @@ panel:SetScript("OnDragStop", function(self)
     SavePosition()
 end)
 
-local headerLogo = CreateFrame("Frame", nil, UIParent)
-headerLogo:SetSize(72, 72)
-headerLogo:SetPoint("TOPLEFT", panel, "TOPLEFT", -22, 12)
-headerLogo:SetFrameStrata("FULLSCREEN_DIALOG")
-headerLogo:SetFrameLevel(1000)
-headerLogo.logo = headerLogo:CreateTexture(nil, "ARTWORK")
-headerLogo.logo:SetPoint("TOPLEFT", 7, -7)
-headerLogo.logo:SetPoint("BOTTOMRIGHT", -7, 7)
-headerLogo.logo:SetTexture("Interface\\AddOns\\OakBonusPlanner\\Media\\logo.png")
-if headerLogo.logo.SetMask then headerLogo.logo:SetMask("Interface\\CharacterFrame\\TempPortraitAlphaMask") end
-headerLogo:Hide()
+local headerLogo = panel.PortraitContainer
+if headerLogo then
+    addonTable.HeaderLogo = headerLogo
+end
 
 local subtitle = panel:CreateFontString(nil, "OVERLAY")
 subtitle:SetPoint("TOP", panel, "TOP", 0, -31)
@@ -946,7 +948,9 @@ local function UpdateRow(row, data, top, index)
     row:SetPoint("TOPLEFT", content, "TOPLEFT", 0, -top)
     row:SetPoint("TOPRIGHT", content, "TOPRIGHT", 0, -top)
     row:SetHeight(height)
-    row:SetBackdropColor(unpack(index % 2 == 0 and CLASSIC_ROW_B or CLASSIC_ROW_A))
+    local rowColor = index % 2 == 0 and CLASSIC_ROW_B or CLASSIC_ROW_A
+    row:SetBackdropColor(unpack(rowColor))
+    row.overlay:SetColorTexture(rowColor[1], rowColor[2], rowColor[3], 0.65)
     row:SetBackdropBorderColor(0.10, 0.10, 0.10, 1)
     row.name:SetWidth(math.max(140, content:GetWidth() - 70))
     row.stats:SetWidth(math.max(140, content:GetWidth() - 70))
@@ -1186,14 +1190,14 @@ function addonTable.Refresh()
 end
 
 panel:SetScript("OnShow", function()
-    headerLogo:Show()
+    panel:SetToplevel(true)
+    panel:Raise()
     panel:SetScale(addonTable.GetPlannerScale())
     currencyWatcher:RegisterEvent("CURRENCY_DISPLAY_UPDATE")
     UpdateBonusRollCount()
     if addonTable.ScanBonusRollHistory then addonTable.ScanBonusRollHistory(false) end
 end)
 panel:SetScript("OnHide", function()
-    headerLogo:Hide()
     currencyWatcher:UnregisterEvent("CURRENCY_DISPLAY_UPDATE")
     if addonTable.CancelBonusRollHistoryScan then addonTable.CancelBonusRollHistoryScan() end
     HideMenus()
