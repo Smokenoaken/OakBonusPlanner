@@ -1,3 +1,7 @@
+## v0.5.4
+
+- Reworked the planner logo to use the native portrait frame with clean border spacing.
+
 ## v0.5.3
 
 - Enabled the optional Great Vault BIS advisor by default while retaining its Options opt-out.
